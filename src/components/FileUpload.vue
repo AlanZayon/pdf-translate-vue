@@ -79,8 +79,11 @@ export default {
       // Exibe o carregamento
       this.isLoading = true;
 
+      const apiUrl = import.meta.env.VITE_API_URL;
+
+
       // Substitua pela URL do seu backend
-      const url = 'http://127.0.0.1:5000/upload';
+      const url = `${apiUrl}/upload`;
 
       // Envia a requisição POST com o arquivo
       axios.post(url, formData, {
@@ -90,7 +93,7 @@ export default {
       })
         .then(response => {
           // Backend retorna um JSON com a URL do PDF
-          const downloadUrl = `http://127.0.0.1:5000${response.data.download_url}`;
+          const downloadUrl = `${apiUrl}${response.data.download_url}`;
 
           // Agora faz outra requisição para baixar o PDF
           axios.get(downloadUrl, { responseType: 'blob' })
