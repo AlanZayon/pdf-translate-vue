@@ -7,7 +7,7 @@
         @click="selectFile"
         class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition"
       >
-        Selecionar Arquivo
+        Slect file
       </button>
 
       <!-- Loading ocupa o tamanho do botão -->
@@ -16,7 +16,7 @@
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"></path>
         </svg>
-        <span>Carregando...</span>
+        <span>Loading...</span>
       </div>
     </div>
 
@@ -30,7 +30,7 @@
       download="arquivo-gerado.pdf" 
       class="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition"
     >
-      📄 Baixar PDF
+      📄 Download PDF
     </a>
   </div>
 </template>
