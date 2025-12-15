@@ -118,21 +118,21 @@
           <div class="text-center mt-8">
             <button 
               @click="generateCampaign"
-              :disabled="!selectedFile || isLoading"
+              :disabled="!selectedFile || isLoading || isPolling"
               :class="[
-                'px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105',
-                selectedFile && !isLoading 
-                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-lg' 
+                'px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform',
+                selectedFile && !isLoading && !isPolling 
+                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-lg hover:scale-105' 
                   : 'bg-gray-600 cursor-not-allowed opacity-50'
               ]"
             >
-              <span v-if="!isLoading">🎲 Gerar Campanha</span>
+              <span v-if="!isLoading && !isPolling">🎲 Gerar Campanha</span>
               <span v-else class="flex items-center justify-center space-x-2">
                 <svg class="w-5 h-5 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"></path>
                 </svg>
-                <span>Gerando Campanha...</span>
+                <span>{{ isPolling ? `Processando... ${pollingProgress}` : 'Enviando arquivo...' }}</span>
               </span>
             </button>
           </div>
@@ -147,8 +147,33 @@
           />
         </div>
 
+        <!-- Processing Status -->
+        <div v-if="isPolling && jobId" class="mt-8 bg-blue-900 bg-opacity-20 backdrop-blur-sm rounded-2xl p-6 border border-blue-500">
+          <div class="flex items-center space-x-4">
+            <span class="text-3xl">⏳</span>
+            <div class="flex-1">
+              <h3 class="font-semibold text-blue-400 text-xl">Processando sua campanha...</h3>
+              <p class="text-blue-300 mt-2">{{ pollingMessage }}</p>
+              
+              <!-- Progress Bar -->
+              <div class="mt-4">
+                <div class="flex justify-between text-sm text-blue-300 mb-2">
+                  <span>{{ pollingProgress }}</span>
+                  <span>Tempo decorrido: {{ formatTime(pollingElapsedTime) }}</span>
+                </div>
+                <div class="w-full bg-blue-900 bg-opacity-30 rounded-full h-2.5">
+                  <div 
+                    class="bg-gradient-to-r from-blue-400 to-purple-400 h-2.5 rounded-full transition-all duration-300"
+                    :style="{ width: pollingProgressPercentage + '%' }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Results Section -->
-        <div v-if="campaignResult" class="mt-8 bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-2xl p-8 border border-green-500 border-opacity-30">
+        <div v-if="campaignResult && !isPolling" class="mt-8 bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-2xl p-8 border border-green-500 border-opacity-30">
           <div class="text-center mb-8">
             <div class="w-16 h-16 mx-auto bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mb-4">
               <span class="text-2xl">🎯</span>
@@ -208,13 +233,14 @@
 
           <!-- Download Buttons -->
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              @click="downloadCampaign"
-              class="flex-1 px-8 py-4 bg-gradient-to-r from-green-500 to-teal-500 rounded-xl font-semibold text-lg hover:from-green-600 hover:to-teal-600 transition transform hover:scale-105 flex items-center justify-center space-x-3"
+            <a 
+              :href="campaignResult.campaign_url"
+              target="_blank"
+              class="flex-1 px-8 py-4 bg-gradient-to-r from-green-500 to-teal-500 rounded-xl font-semibold text-lg hover:from-green-600 hover:to-teal-600 transition transform hover:scale-105 flex items-center justify-center space-x-3 text-center"
             >
               <span>📥</span>
               <span>Download da Campanha</span>
-            </button>
+            </a>
             
             <button 
               @click="downloadFormattedPDF"
@@ -232,6 +258,11 @@
               <span>Nova Campanha</span>
             </button>
           </div>
+          
+          <!-- Job Info -->
+          <div class="mt-6 text-center text-sm text-gray-400">
+            <p class="mt-1">Tempo total de processamento: {{ formatTime(processingTime) }}</p>
+          </div>
         </div>
 
         <!-- Error Message -->
@@ -241,6 +272,13 @@
             <div>
               <h3 class="font-semibold text-red-400 text-xl">Erro ao gerar campanha</h3>
               <p class="text-red-300 mt-2">{{ errorMessage }}</p>
+              <button 
+                v-if="jobId"
+                @click="retryPolling"
+                class="mt-4 px-4 py-2 bg-red-700 rounded-lg hover:bg-red-600 transition text-sm"
+              >
+                Tentar novamente
+              </button>
             </div>
           </div>
         </div>
@@ -249,7 +287,7 @@
         <div class="mt-12 text-center">
           <button 
             @click="loadExample"
-            :disabled="isLoading"
+            :disabled="isLoading || isPolling"
             class="px-8 py-4 bg-gray-700 bg-opacity-50 border-2 border-gray-600 rounded-xl hover:bg-gray-600 hover:border-gray-500 transition text-gray-300 text-lg font-semibold"
           >
             🎯 Ver Exemplo de Campanha
@@ -264,10 +302,10 @@
         <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <p class="text-gray-400">RPG Campaign Generator - Transforme livros em aventuras épicas</p>
           <div class="flex space-x-4">
-            <button @click="printCampaign" v-if="campaignResult" class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
+            <button @click="printCampaign" v-if="campaignResult && !isPolling" class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
               🖨️ Imprimir
             </button>
-            <button @click="copyToClipboard" v-if="campaignResult" class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
+            <button @click="copyToClipboard" v-if="campaignResult && !isPolling" class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
               📋 Copiar
             </button>
           </div>
@@ -289,11 +327,22 @@ export default {
       selectedLanguage: 'pt',
       selectedComplexity: 'mediana',
       isLoading: false,
+      isPolling: false,
       dragOver: false,
       campaignResult: null,
       campaignContent: '',
       errorMessage: '',
       showFullPreview: false,
+      jobId: null,
+      pollingInterval: null,
+      pollingAttempts: 0,
+      maxPollingAttempts: 300, // 5 minutos (300 * 1 segundo)
+      pollingStartTime: null,
+      pollingElapsedTime: 0,
+      pollingProgress: '0%',
+      pollingProgressPercentage: 0,
+      pollingMessage: 'Aguardando processamento...',
+      processingTime: 0,
       
       languages: [
         { code: 'pt', name: 'Português' },
@@ -333,6 +382,10 @@ export default {
   
   mounted() {
     this.fetchComplexities();
+  },
+  
+  beforeUnmount() {
+    this.stopPolling();
   },
   
   methods: {
@@ -391,10 +444,18 @@ export default {
       }
 
       this.isLoading = true;
+      this.isPolling = false;
       this.errorMessage = '';
       this.campaignResult = null;
       this.campaignContent = '';
       this.showFullPreview = false;
+      this.jobId = null;
+      this.pollingAttempts = 0;
+      this.pollingStartTime = Date.now();
+      this.pollingElapsedTime = 0;
+      this.pollingProgress = '0%';
+      this.pollingProgressPercentage = 0;
+      this.pollingMessage = 'Aguardando processamento...';
 
       const formData = new FormData();
       formData.append('file', this.selectedFile);
@@ -408,63 +469,178 @@ export default {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
+          timeout: 30000, // 30 segundos para upload
         });
 
-        if (response.data.success) {
-          this.campaignResult = response.data;
-          // Buscar o conteúdo completo da campanha
-          await this.fetchFullCampaign(response.data.campaign_url);
+        if (response.status === 202 && response.data.job_id) {
+          // Processamento assíncrono iniciado
+          this.jobId = response.data.job_id;
+          this.isLoading = false;
+          this.isPolling = true;
+          
+          // Iniciar polling
+          this.startPolling();
+        } else if (response.data.success && response.data.status === 'completed') {
+          // Processamento síncrono (fallback sem Redis)
+          this.isLoading = false;
+          this.handleCampaignSuccess(response.data);
         } else {
-          this.errorMessage = response.data.error || 'Erro ao gerar campanha.';
+          this.errorMessage = response.data.error || 'Erro ao iniciar processamento.';
+          this.isLoading = false;
         }
       } catch (error) {
         console.error('Erro ao gerar campanha:', error);
-        if (error.response?.data?.error) {
-          this.errorMessage = error.response.data.error;
-        } else if (error.code === 'ECONNABORTED') {
-          this.errorMessage = 'Tempo limite excedido. O servidor está processando um arquivo grande.';
-        } else {
-          this.errorMessage = 'Erro de conexão. Verifique se o servidor está rodando.';
-        }
-      } finally {
+        this.handleCampaignError(error);
         this.isLoading = false;
       }
     },
 
+    startPolling() {
+      this.stopPolling(); // Limpar qualquer polling anterior
+      
+      this.pollingInterval = setInterval(() => {
+        this.pollJobStatus();
+      }, 2000); // Verificar a cada 2 segundos
+    },
+
+    stopPolling() {
+      if (this.pollingInterval) {
+        clearInterval(this.pollingInterval);
+        this.pollingInterval = null;
+      }
+    },
+
+    async pollJobStatus() {
+      if (!this.jobId) {
+        this.stopPolling();
+        return;
+      }
+
+      // Atualizar tempo decorrido
+      this.pollingElapsedTime = Math.floor((Date.now() - this.pollingStartTime) / 1000);
+      
+      // Atualizar progresso (máximo 95% enquanto estiver processando)
+      this.pollingProgressPercentage = Math.min(95, Math.floor((this.pollingElapsedTime / 300) * 95));
+      this.pollingProgress = `${this.pollingProgressPercentage}%`;
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+      try {
+        const response = await axios.get(`${apiUrl}/job-status/${this.jobId}`, {
+          timeout: 10000,
+        });
+
+        const statusData = response.data;
+        
+        if (statusData.status === 'completed') {
+          // ✅ Job concluído com sucesso
+          this.stopPolling();
+          this.isPolling = false;
+          this.processingTime = this.pollingElapsedTime;
+          
+          // Buscar conteúdo da campanha
+          await this.fetchFullCampaign(statusData.campaign_url);
+          
+          // Preparar resultado
+          this.campaignResult = {
+            job_id: this.jobId,
+            campaign_url: statusData.campaign_url,
+            campaign_filename: statusData.campaign_filename,
+            preview: statusData.preview,
+            message: statusData.message || 'Campanha gerada com sucesso!'
+          };
+          
+        } else if (statusData.status === 'failed') {
+          // ❌ Job falhou
+          this.stopPolling();
+          this.isPolling = false;
+          this.errorMessage = statusData.data?.error || statusData.message || 'Processamento falhou';
+          
+        } else if (statusData.status === 'processing') {
+          // ⏳ Ainda processando
+          this.pollingMessage = statusData.data?.progress || 'Processando...';
+          this.pollingAttempts++;
+          
+          // Verificar timeout
+          if (this.pollingAttempts >= this.maxPollingAttempts) {
+            this.stopPolling();
+            this.isPolling = false;
+            this.errorMessage = 'Timeout - Processamento demorou muito. Tente novamente com um arquivo menor.';
+          }
+          
+        } else if (statusData.status === 'queued') {
+          // 📋 Na fila
+          this.pollingMessage = 'Na fila de processamento...';
+          this.pollingAttempts++;
+        }
+        
+      } catch (error) {
+        console.error('Erro ao verificar status:', error);
+        this.pollingAttempts++;
+        
+        if (this.pollingAttempts >= 10) { // 10 tentativas com erro
+          this.stopPolling();
+          this.isPolling = false;
+          this.errorMessage = 'Erro ao verificar status do processamento.';
+        }
+      }
+    },
+
     async fetchFullCampaign(campaignUrl) {
+      if (!campaignUrl) return;
+      
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const downloadUrl = `${apiUrl}${campaignUrl}`;
 
       try {
         const response = await axios.get(downloadUrl, { 
           responseType: 'text',
+          timeout: 30000,
         });
         this.campaignContent = response.data;
       } catch (error) {
         console.error('Erro ao buscar campanha completa:', error);
-        this.campaignContent = this.campaignResult.preview || 'Conteúdo da campanha não disponível.';
+        // Usar preview se disponível
+        if (this.campaignResult?.preview) {
+          this.campaignContent = this.campaignResult.preview;
+        } else {
+          this.campaignContent = 'Conteúdo da campanha não disponível.';
+        }
       }
     },
 
-    async downloadCampaign() {
-      if (!this.campaignContent) return;
+    handleCampaignSuccess(data) {
+      this.campaignResult = data;
+      this.campaignContent = data.preview || 'Campanha gerada com sucesso!';
+      this.processingTime = 0; // Processamento instantâneo
+    },
 
-      try {
-        // Criar conteúdo formatado para download
-        const formattedContent = this.createFormattedContent();
-        const blob = new Blob([formattedContent], { type: 'text/markdown; charset=utf-8' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `campanha-rpg-${this.selectedComplexity}-${new Date().getTime()}.md`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      } catch (error) {
-        console.error('Erro ao baixar campanha:', error);
-        this.errorMessage = 'Erro ao baixar a campanha.';
+    handleCampaignError(error) {
+      if (error.response?.data?.error) {
+        this.errorMessage = error.response.data.error;
+      } else if (error.code === 'ECONNABORTED') {
+        this.errorMessage = 'Tempo limite excedido. Tente novamente com um arquivo menor.';
+      } else if (error.message.includes('Network Error')) {
+        this.errorMessage = 'Erro de conexão. Verifique se o servidor está rodando.';
+      } else {
+        this.errorMessage = 'Erro ao processar a requisição. Tente novamente.';
       }
+    },
+
+    retryPolling() {
+      if (this.jobId) {
+        this.isPolling = true;
+        this.errorMessage = '';
+        this.pollingAttempts = 0;
+        this.pollingStartTime = Date.now();
+        this.startPolling();
+      }
+    },
+
+    formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s`;
     },
 
     async downloadFormattedPDF() {
@@ -571,7 +747,6 @@ export default {
         // Aguardar o conteúdo carregar antes de imprimir
         printWindow.onload = () => {
           printWindow.print();
-          // printWindow.close(); // Comente esta linha se quiser que o usuário decida quando fechar
         };
       } catch (error) {
         console.error('Erro ao gerar PDF:', error);
@@ -589,6 +764,7 @@ export default {
 **Sessões:** ${complexityInfo.sessions}  
 **Duração:** ${complexityInfo.duration}  
 **Gerado em:** ${new Date().toLocaleDateString('pt-BR')}
+**Tempo de processamento:** ${this.formatTime(this.processingTime)}
 
 ---
 
@@ -638,6 +814,9 @@ ${this.campaignContent}
       this.campaignResult = null;
       this.campaignContent = '';
       this.showFullPreview = false;
+      this.jobId = null;
+      this.isPolling = false;
+      this.stopPolling();
       this.clearFile();
     },
 
