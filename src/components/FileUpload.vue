@@ -5,7 +5,8 @@
       <div class="container mx-auto px-4 py-6">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
-            <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+            <div
+              class="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
               <span class="text-xl font-bold">🎲</span>
             </div>
             <div>
@@ -23,7 +24,8 @@
     <main class="container mx-auto px-4 py-8">
       <!-- Upload Section -->
       <div class="max-w-6xl mx-auto">
-        <div class="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500 border-opacity-30 shadow-2xl">
+        <div
+          class="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500 border-opacity-30 shadow-2xl">
           <div class="text-center mb-8">
             <h2 class="text-3xl font-bold mb-4">Criar Nova Campanha</h2>
             <p class="text-gray-300 text-lg">
@@ -38,10 +40,8 @@
               <label class="block text-sm font-medium mb-2 text-gray-300">
                 🌍 Idioma da Campanha
               </label>
-              <select 
-                v-model="selectedLanguage"
-                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
+              <select v-model="selectedLanguage"
+                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                 <option v-for="lang in languages" :key="lang.code" :value="lang.code">
                   {{ lang.name }}
                 </option>
@@ -53,10 +53,8 @@
               <label class="block text-sm font-medium mb-2 text-gray-300">
                 ⚡ Complexidade
               </label>
-              <select 
-                v-model="selectedComplexity"
-                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
+              <select v-model="selectedComplexity"
+                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                 <option v-for="complexity in complexities" :key="complexity.id" :value="complexity.id">
                   {{ complexity.name }} - {{ complexity.sessions }}
                 </option>
@@ -76,21 +74,16 @@
           </div>
 
           <!-- Upload Area -->
-          <div 
-            @click="selectFile"
-            @drop="handleDrop"
-            @dragover="handleDragOver"
-            @dragleave="handleDragLeave"
-            :class="[
-              'border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300',
-              dragOver ? 'border-purple-400 bg-purple-900 bg-opacity-20' : 'border-gray-600 hover:border-purple-500 hover:bg-gray-700'
-            ]"
-          >
+          <div @click="selectFile" @drop="handleDrop" @dragover="handleDragOver" @dragleave="handleDragLeave" :class="[
+            'border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300',
+            dragOver ? 'border-purple-400 bg-purple-900 bg-opacity-20' : 'border-gray-600 hover:border-purple-500 hover:bg-gray-700'
+          ]">
             <div class="space-y-4">
-              <div class="w-16 h-16 mx-auto bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
+              <div
+                class="w-16 h-16 mx-auto bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
                 <span class="text-2xl">📚</span>
               </div>
-              
+
               <div>
                 <h3 class="text-xl font-semibold mb-2">
                   {{ selectedFile ? selectedFile.name : 'Selecione seu livro de RPG' }}
@@ -104,11 +97,8 @@
                 Formatos suportados: PDF (máx. 50MB)
               </div>
 
-              <button 
-                v-if="selectedFile && !isLoading"
-                @click.stop="clearFile"
-                class="px-4 py-2 bg-red-500 bg-opacity-20 text-red-300 rounded-lg hover:bg-red-600 hover:bg-opacity-30 transition"
-              >
+              <button v-if="selectedFile && !isLoading" @click.stop="clearFile"
+                class="px-4 py-2 bg-red-500 bg-opacity-20 text-red-300 rounded-lg hover:bg-red-600 hover:bg-opacity-30 transition">
                 Remover Arquivo
               </button>
             </div>
@@ -116,19 +106,16 @@
 
           <!-- Upload Button -->
           <div class="text-center mt-8">
-            <button 
-              @click="generateCampaign"
-              :disabled="!selectedFile || isLoading || isPolling"
-              :class="[
-                'px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform',
-                selectedFile && !isLoading && !isPolling 
-                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-lg hover:scale-105' 
-                  : 'bg-gray-600 cursor-not-allowed opacity-50'
-              ]"
-            >
+            <button @click="generateCampaign" :disabled="!selectedFile || isLoading || isPolling" :class="[
+              'px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform',
+              selectedFile && !isLoading && !isPolling
+                ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-lg hover:scale-105'
+                : 'bg-gray-600 cursor-not-allowed opacity-50'
+            ]">
               <span v-if="!isLoading && !isPolling">🎲 Gerar Campanha</span>
               <span v-else class="flex items-center justify-center space-x-2">
-                <svg class="w-5 h-5 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                  viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"></path>
                 </svg>
@@ -138,23 +125,18 @@
           </div>
 
           <!-- Hidden File Input -->
-          <input 
-            type="file" 
-            ref="fileInput" 
-            @change="handleFileChange" 
-            accept=".pdf" 
-            class="hidden" 
-          />
+          <input type="file" ref="fileInput" @change="handleFileChange" accept=".pdf" class="hidden" />
         </div>
 
         <!-- Processing Status -->
-        <div v-if="isPolling && jobId" class="mt-8 bg-blue-900 bg-opacity-20 backdrop-blur-sm rounded-2xl p-6 border border-blue-500">
+        <div v-if="isPolling && jobId"
+          class="mt-8 bg-blue-900 bg-opacity-20 backdrop-blur-sm rounded-2xl p-6 border border-blue-500">
           <div class="flex items-center space-x-4">
             <span class="text-3xl">⏳</span>
             <div class="flex-1">
               <h3 class="font-semibold text-blue-400 text-xl">Processando sua campanha...</h3>
               <p class="text-blue-300 mt-2">{{ pollingMessage }}</p>
-              
+
               <!-- Progress Bar -->
               <div class="mt-4">
                 <div class="flex justify-between text-sm text-blue-300 mb-2">
@@ -162,10 +144,9 @@
                   <span>Tempo decorrido: {{ formatTime(pollingElapsedTime) }}</span>
                 </div>
                 <div class="w-full bg-blue-900 bg-opacity-30 rounded-full h-2.5">
-                  <div 
+                  <div
                     class="bg-gradient-to-r from-blue-400 to-purple-400 h-2.5 rounded-full transition-all duration-300"
-                    :style="{ width: pollingProgressPercentage + '%' }"
-                  ></div>
+                    :style="{ width: pollingProgressPercentage + '%' }"></div>
                 </div>
               </div>
             </div>
@@ -173,9 +154,11 @@
         </div>
 
         <!-- Results Section -->
-        <div v-if="campaignResult && !isPolling" class="mt-8 bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-2xl p-8 border border-green-500 border-opacity-30">
+        <div v-if="campaignResult && !isPolling"
+          class="mt-8 bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-2xl p-8 border border-green-500 border-opacity-30">
           <div class="text-center mb-8">
-            <div class="w-16 h-16 mx-auto bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mb-4">
+            <div
+              class="w-16 h-16 mx-auto bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mb-4">
               <span class="text-2xl">🎯</span>
             </div>
             <h2 class="text-3xl font-bold text-green-400 mb-2">Campanha Gerada com Sucesso!</h2>
@@ -189,20 +172,16 @@
                 <span>📖</span>
                 <span>Preview da Campanha</span>
               </h3>
-              <button 
-                @click="togglePreview"
-                class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-sm"
-              >
+              <button @click="togglePreview"
+                class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-sm">
                 {{ showFullPreview ? 'Mostrar Menos' : 'Mostrar Mais' }}
               </button>
             </div>
-            
-            <div 
-              :class="[
-                'bg-gray-900 rounded-xl p-6 overflow-hidden transition-all duration-500',
-                showFullPreview ? 'max-h-none' : 'max-h-96'
-              ]"
-            >
+
+            <div :class="[
+              'bg-gray-900 rounded-xl p-6 overflow-hidden transition-all duration-500',
+              showFullPreview ? 'max-h-none' : 'max-h-96'
+            ]">
               <div class="prose prose-invert prose-lg max-w-none" v-html="formattedCampaign"></div>
             </div>
           </div>
@@ -233,32 +212,25 @@
 
           <!-- Download Buttons -->
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a 
-              :href="campaignResult.campaign_url"
-              target="_blank"
-              class="flex-1 px-8 py-4 bg-gradient-to-r from-green-500 to-teal-500 rounded-xl font-semibold text-lg hover:from-green-600 hover:to-teal-600 transition transform hover:scale-105 flex items-center justify-center space-x-3 text-center"
-            >
+            <a :href="campaignResult.campaign_url" target="_blank"
+              class="flex-1 px-8 py-4 bg-gradient-to-r from-green-500 to-teal-500 rounded-xl font-semibold text-lg hover:from-green-600 hover:to-teal-600 transition transform hover:scale-105 flex items-center justify-center space-x-3 text-center">
               <span>📥</span>
               <span>Download da Campanha</span>
             </a>
-            
-            <button 
-              @click="downloadFormattedPDF"
-              class="flex-1 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl font-semibold text-lg hover:from-blue-600 hover:to-purple-600 transition transform hover:scale-105 flex items-center justify-center space-x-3"
-            >
+
+            <button @click="downloadFormattedPDF"
+              class="flex-1 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl font-semibold text-lg hover:from-blue-600 hover:to-purple-600 transition transform hover:scale-105 flex items-center justify-center space-x-3">
               <span>🖨️</span>
               <span>Download PDF Formatado</span>
             </button>
-            
-            <button 
-              @click="generateNewCampaign"
-              class="flex-1 px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl font-semibold text-lg hover:from-purple-600 hover:to-pink-600 transition transform hover:scale-105 flex items-center justify-center space-x-3"
-            >
+
+            <button @click="generateNewCampaign"
+              class="flex-1 px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl font-semibold text-lg hover:from-purple-600 hover:to-pink-600 transition transform hover:scale-105 flex items-center justify-center space-x-3">
               <span>🎲</span>
               <span>Nova Campanha</span>
             </button>
           </div>
-          
+
           <!-- Job Info -->
           <div class="mt-6 text-center text-sm text-gray-400">
             <p class="mt-1">Tempo total de processamento: {{ formatTime(processingTime) }}</p>
@@ -266,17 +238,15 @@
         </div>
 
         <!-- Error Message -->
-        <div v-if="errorMessage" class="mt-8 bg-red-900 bg-opacity-20 backdrop-blur-sm rounded-2xl p-6 border border-red-500">
+        <div v-if="errorMessage"
+          class="mt-8 bg-red-900 bg-opacity-20 backdrop-blur-sm rounded-2xl p-6 border border-red-500">
           <div class="flex items-center space-x-4">
             <span class="text-3xl">❌</span>
             <div>
               <h3 class="font-semibold text-red-400 text-xl">Erro ao gerar campanha</h3>
               <p class="text-red-300 mt-2">{{ errorMessage }}</p>
-              <button 
-                v-if="jobId"
-                @click="retryPolling"
-                class="mt-4 px-4 py-2 bg-red-700 rounded-lg hover:bg-red-600 transition text-sm"
-              >
+              <button v-if="jobId" @click="retryPolling"
+                class="mt-4 px-4 py-2 bg-red-700 rounded-lg hover:bg-red-600 transition text-sm">
                 Tentar novamente
               </button>
             </div>
@@ -285,11 +255,8 @@
 
         <!-- Example Section -->
         <div class="mt-12 text-center">
-          <button 
-            @click="loadExample"
-            :disabled="isLoading || isPolling"
-            class="px-8 py-4 bg-gray-700 bg-opacity-50 border-2 border-gray-600 rounded-xl hover:bg-gray-600 hover:border-gray-500 transition text-gray-300 text-lg font-semibold"
-          >
+          <button @click="loadExample" :disabled="isLoading || isPolling"
+            class="px-8 py-4 bg-gray-700 bg-opacity-50 border-2 border-gray-600 rounded-xl hover:bg-gray-600 hover:border-gray-500 transition text-gray-300 text-lg font-semibold">
             🎯 Ver Exemplo de Campanha
           </button>
         </div>
@@ -302,10 +269,12 @@
         <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <p class="text-gray-400">RPG Campaign Generator - Transforme livros em aventuras épicas</p>
           <div class="flex space-x-4">
-            <button @click="printCampaign" v-if="campaignResult && !isPolling" class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
+            <button @click="printCampaign" v-if="campaignResult && !isPolling"
+              class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
               🖨️ Imprimir
             </button>
-            <button @click="copyToClipboard" v-if="campaignResult && !isPolling" class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
+            <button @click="copyToClipboard" v-if="campaignResult && !isPolling"
+              class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
               📋 Copiar
             </button>
           </div>
@@ -343,7 +312,7 @@ export default {
       pollingProgressPercentage: 0,
       pollingMessage: 'Aguardando processamento...',
       processingTime: 0,
-      
+
       languages: [
         { code: 'pt', name: 'Português' },
         { code: 'en', name: 'English' },
@@ -356,7 +325,7 @@ export default {
         { code: 'zh', name: '中文' },
         { code: 'ru', name: 'Русский' }
       ],
-      
+
       complexities: [
         { id: 'simples', name: 'Campanha Simples', sessions: '1-2 sessões', description: 'História direta e objetiva, perfeita para oneshots', duration: '3-8 horas', focus: 'Combate e objetivos claros' },
         { id: 'mediana', name: 'Campanha Mediana', sessions: '3-4 sessões', description: 'Equilíbrio entre combate, exploração e desenvolvimento', duration: '9-16 horas', focus: 'História com ramificações' },
@@ -364,30 +333,30 @@ export default {
       ]
     };
   },
-  
+
   computed: {
     formattedCampaign() {
       if (!this.campaignContent) return '';
-      
+
       // Configurar marked para renderização segura
       marked.setOptions({
         breaks: true,
         gfm: true,
         sanitize: false
       });
-      
+
       return marked(this.campaignContent);
     }
   },
-  
+
   mounted() {
     this.fetchComplexities();
   },
-  
+
   beforeUnmount() {
     this.stopPolling();
   },
-  
+
   methods: {
     // File handling methods
     selectFile() {
@@ -409,7 +378,7 @@ export default {
     handleDrop(event) {
       event.preventDefault();
       this.dragOver = false;
-      
+
       const files = event.dataTransfer.files;
       if (files.length > 0) {
         const file = files[0];
@@ -477,7 +446,7 @@ export default {
           this.jobId = response.data.job_id;
           this.isLoading = false;
           this.isPolling = true;
-          
+
           // Iniciar polling
           this.startPolling();
         } else if (response.data.success && response.data.status === 'completed') {
@@ -497,7 +466,7 @@ export default {
 
     startPolling() {
       this.stopPolling(); // Limpar qualquer polling anterior
-      
+
       this.pollingInterval = setInterval(() => {
         this.pollJobStatus();
       }, 2000); // Verificar a cada 2 segundos
@@ -516,69 +485,64 @@ export default {
         return;
       }
 
-      // Atualizar tempo decorrido
-      this.pollingElapsedTime = Math.floor((Date.now() - this.pollingStartTime) / 1000);
-      
-      // Atualizar progresso (máximo 95% enquanto estiver processando)
-      this.pollingProgressPercentage = Math.min(95, Math.floor((this.pollingElapsedTime / 300) * 95));
+      this.pollingElapsedTime = Math.floor(
+        (Date.now() - this.pollingStartTime) / 1000
+      );
+
+      this.pollingProgressPercentage = Math.min(
+        95,
+        Math.floor((this.pollingElapsedTime / 300) * 95)
+      );
       this.pollingProgress = `${this.pollingProgressPercentage}%`;
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
       try {
-        const response = await axios.get(`${apiUrl}/job-status/${this.jobId}`, {
-          timeout: 10000,
-        });
+        const { data: statusData } = await axios.get(
+          `${apiUrl}/job-status/${this.jobId}`,
+          { timeout: 10000 }
+        );
 
-        const statusData = response.data;
-        
+        const result = statusData.result;
+
         if (statusData.status === 'completed') {
-          // ✅ Job concluído com sucesso
           this.stopPolling();
           this.isPolling = false;
           this.processingTime = this.pollingElapsedTime;
-          
-          // Buscar conteúdo da campanha
-          await this.fetchFullCampaign(statusData.campaign_url);
-          
-          // Preparar resultado
+
+          // ⬇️ URL direta do S3
+          const campaignUrl = result?.campaign_url;
+
+          // Buscar conteúdo direto do S3
+          await this.fetchFullCampaign(campaignUrl);
+
           this.campaignResult = {
             job_id: this.jobId,
-            campaign_url: statusData.campaign_url,
-            campaign_filename: statusData.campaign_filename,
-            preview: statusData.preview,
-            message: statusData.message || 'Campanha gerada com sucesso!'
+            campaign_url: campaignUrl,
+            preview: result?.preview,
+            message: 'Campanha gerada com sucesso!'
           };
-          
+
         } else if (statusData.status === 'failed') {
-          // ❌ Job falhou
           this.stopPolling();
           this.isPolling = false;
-          this.errorMessage = statusData.data?.error || statusData.message || 'Processamento falhou';
-          
+          this.errorMessage =
+            result?.error || statusData.message || 'Processamento falhou';
+
         } else if (statusData.status === 'processing') {
-          // ⏳ Ainda processando
-          this.pollingMessage = statusData.data?.progress || 'Processando...';
+          this.pollingMessage = result?.progress || 'Processando...';
           this.pollingAttempts++;
-          
-          // Verificar timeout
-          if (this.pollingAttempts >= this.maxPollingAttempts) {
-            this.stopPolling();
-            this.isPolling = false;
-            this.errorMessage = 'Timeout - Processamento demorou muito. Tente novamente com um arquivo menor.';
-          }
-          
+
         } else if (statusData.status === 'queued') {
-          // 📋 Na fila
           this.pollingMessage = 'Na fila de processamento...';
           this.pollingAttempts++;
         }
-        
+
       } catch (error) {
         console.error('Erro ao verificar status:', error);
         this.pollingAttempts++;
-        
-        if (this.pollingAttempts >= 10) { // 10 tentativas com erro
+
+        if (this.pollingAttempts >= 10) {
           this.stopPolling();
           this.isPolling = false;
           this.errorMessage = 'Erro ao verificar status do processamento.';
@@ -586,21 +550,21 @@ export default {
       }
     },
 
+
     async fetchFullCampaign(campaignUrl) {
       if (!campaignUrl) return;
-      
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const downloadUrl = `${apiUrl}${campaignUrl}`;
 
       try {
-        const response = await axios.get(downloadUrl, { 
+        const response = await axios.get(campaignUrl, {
           responseType: 'text',
-          timeout: 30000,
+          timeout: 30000
         });
+
         this.campaignContent = response.data;
+
       } catch (error) {
-        console.error('Erro ao buscar campanha completa:', error);
-        // Usar preview se disponível
+        console.error('Erro ao buscar campanha:', error);
+
         if (this.campaignResult?.preview) {
           this.campaignContent = this.campaignResult.preview;
         } else {
@@ -608,6 +572,7 @@ export default {
         }
       }
     },
+
 
     handleCampaignSuccess(data) {
       this.campaignResult = data;
@@ -740,10 +705,10 @@ export default {
             </body>
           </html>
         `;
-        
+
         printWindow.document.write(formattedContent);
         printWindow.document.close();
-        
+
         // Aguardar o conteúdo carregar antes de imprimir
         printWindow.onload = () => {
           printWindow.print();
@@ -831,7 +796,7 @@ ${this.campaignContent}
 
     async fetchComplexities() {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
+
       try {
         const response = await axios.get(`${apiUrl}/campaign-complexities`);
         if (response.data) {
@@ -927,7 +892,8 @@ ${this.campaignContent}
   font-style: italic;
 }
 
-.prose ul, .prose ol {
+.prose ul,
+.prose ol {
   margin: 1em 0;
   padding-left: 1.5em;
 }
@@ -966,7 +932,8 @@ ${this.campaignContent}
   margin: 1.5em 0;
 }
 
-.prose th, .prose td {
+.prose th,
+.prose td {
   border: 1px solid #4b5563;
   padding: 0.75em;
   text-align: left;
@@ -983,17 +950,19 @@ ${this.campaignContent}
   .no-print {
     display: none !important;
   }
-  
+
   body {
     background: white !important;
     color: black !important;
   }
-  
+
   .prose {
     color: black !important;
   }
-  
-  .prose h1, .prose h2, .prose h3 {
+
+  .prose h1,
+  .prose h2,
+  .prose h3 {
     color: #1f2937 !important;
   }
 }
