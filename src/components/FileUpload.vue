@@ -329,7 +329,6 @@ export default {
       complexities: [
         { id: 'simple', backendId: 'simples', name: 'Simple Campaign', sessions: '1-2 sessions', description: 'Straightforward story, perfect for oneshots', duration: '3-8 hours', focus: 'Combat and clear objectives' },
         { id: 'medium', backendId: 'mediana', name: 'Medium Campaign', sessions: '3-4 sessions', description: 'Balance between combat, exploration, and development', duration: '9-16 hours', focus: 'Story with branching paths' },
-        { id: 'complex', backendId: 'complexa', name: 'Complex Campaign', sessions: '5+ sessions', description: 'Epic arc with multiple paths and consequences', duration: '17+ hours', focus: 'Deep narrative' }
       ],
 
       // Mapeamento para converter código de idioma frontend para backend
@@ -350,7 +349,6 @@ export default {
       complexityMapping: {
         'simple': 'simples',
         'medium': 'mediana',
-        'complex': 'complexa'
       }
     };
   },
