@@ -13,7 +13,7 @@
               <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
                 RPG Campaign Generator
               </h1>
-              <p class="text-gray-300 text-sm">Transforme livros de RPG em campanhas prontas para jogar</p>
+              <p class="text-gray-300 text-sm">Transform RPG books into ready-to-play campaigns</p>
             </div>
           </div>
         </div>
@@ -27,9 +27,9 @@
         <div
           class="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500 border-opacity-30 shadow-2xl">
           <div class="text-center mb-8">
-            <h2 class="text-3xl font-bold mb-4">Criar Nova Campanha</h2>
+            <h2 class="text-3xl font-bold mb-4">Create New Campaign</h2>
             <p class="text-gray-300 text-lg">
-              Envie um livro de RPG e receba uma campanha completa e pronta para jogar
+              Upload an RPG book and receive a complete, ready-to-play campaign
             </p>
           </div>
 
@@ -38,7 +38,7 @@
             <!-- Language Selection -->
             <div>
               <label class="block text-sm font-medium mb-2 text-gray-300">
-                🌍 Idioma da Campanha
+                🌍 Campaign Language
               </label>
               <select v-model="selectedLanguage"
                 class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent">
@@ -51,7 +51,7 @@
             <!-- Complexity Selection -->
             <div>
               <label class="block text-sm font-medium mb-2 text-gray-300">
-                ⚡ Complexidade
+                ⚡ Complexity
               </label>
               <select v-model="selectedComplexity"
                 class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent">
@@ -86,20 +86,20 @@
 
               <div>
                 <h3 class="text-xl font-semibold mb-2">
-                  {{ selectedFile ? selectedFile.name : 'Selecione seu livro de RPG' }}
+                  {{ selectedFile ? selectedFile.name : 'Select your RPG book' }}
                 </h3>
                 <p class="text-gray-300">
-                  Arraste um arquivo PDF ou clique para selecionar
+                  Drag a PDF file or click to select
                 </p>
               </div>
 
               <div v-if="!selectedFile" class="text-sm text-gray-400">
-                Formatos suportados: PDF (máx. 50MB)
+                Supported formats: PDF (max. 50MB)
               </div>
 
               <button v-if="selectedFile && !isLoading" @click.stop="clearFile"
                 class="px-4 py-2 bg-red-500 bg-opacity-20 text-red-300 rounded-lg hover:bg-red-600 hover:bg-opacity-30 transition">
-                Remover Arquivo
+                Remove File
               </button>
             </div>
           </div>
@@ -112,14 +112,14 @@
                 ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-lg hover:scale-105'
                 : 'bg-gray-600 cursor-not-allowed opacity-50'
             ]">
-              <span v-if="!isLoading && !isPolling">🎲 Gerar Campanha</span>
+              <span v-if="!isLoading && !isPolling">🎲 Generate Campaign</span>
               <span v-else class="flex items-center justify-center space-x-2">
                 <svg class="w-5 h-5 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
                   viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"></path>
                 </svg>
-                <span>{{ isPolling ? `Processando... ${pollingProgress}` : 'Enviando arquivo...' }}</span>
+                <span>{{ isPolling ? `Processing... ${pollingProgress}` : 'Uploading file...' }}</span>
               </span>
             </button>
           </div>
@@ -134,14 +134,14 @@
           <div class="flex items-center space-x-4">
             <span class="text-3xl">⏳</span>
             <div class="flex-1">
-              <h3 class="font-semibold text-blue-400 text-xl">Processando sua campanha...</h3>
+              <h3 class="font-semibold text-blue-400 text-xl">Processing your campaign...</h3>
               <p class="text-blue-300 mt-2">{{ pollingMessage }}</p>
 
               <!-- Progress Bar -->
               <div class="mt-4">
                 <div class="flex justify-between text-sm text-blue-300 mb-2">
                   <span>{{ pollingProgress }}</span>
-                  <span>Tempo decorrido: {{ formatTime(pollingElapsedTime) }}</span>
+                  <span>Elapsed time: {{ formatTime(pollingElapsedTime) }}</span>
                 </div>
                 <div class="w-full bg-blue-900 bg-opacity-30 rounded-full h-2.5">
                   <div
@@ -161,8 +161,8 @@
               class="w-16 h-16 mx-auto bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mb-4">
               <span class="text-2xl">🎯</span>
             </div>
-            <h2 class="text-3xl font-bold text-green-400 mb-2">Campanha Gerada com Sucesso!</h2>
-            <p class="text-gray-300 text-lg">Sua campanha está pronta para ser jogada</p>
+            <h2 class="text-3xl font-bold text-green-400 mb-2">Campaign Generated Successfully!</h2>
+            <p class="text-gray-300 text-lg">Your campaign is ready to play</p>
           </div>
 
           <!-- Campaign Preview -->
@@ -170,11 +170,11 @@
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-xl font-semibold flex items-center space-x-2">
                 <span>📖</span>
-                <span>Preview da Campanha</span>
+                <span>Campaign Preview</span>
               </h3>
               <button @click="togglePreview"
                 class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-sm">
-                {{ showFullPreview ? 'Mostrar Menos' : 'Mostrar Mais' }}
+                {{ showFullPreview ? 'Show Less' : 'Show More' }}
               </button>
             </div>
 
@@ -190,22 +190,22 @@
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div class="bg-gray-700 rounded-lg p-4 text-center">
               <div class="text-2xl mb-2">🎭</div>
-              <div class="text-sm text-gray-300">Complexidade</div>
-              <div class="font-semibold capitalize">{{ selectedComplexity }}</div>
+              <div class="text-sm text-gray-300">Complexity</div>
+              <div class="font-semibold">{{ getComplexityDisplayName(selectedComplexity) }}</div>
             </div>
             <div class="bg-gray-700 rounded-lg p-4 text-center">
               <div class="text-2xl mb-2">🌍</div>
-              <div class="text-sm text-gray-300">Idioma</div>
+              <div class="text-sm text-gray-300">Language</div>
               <div class="font-semibold">{{ getLanguageName(selectedLanguage) }}</div>
             </div>
             <div class="bg-gray-700 rounded-lg p-4 text-center">
               <div class="text-2xl mb-2">⏱️</div>
-              <div class="text-sm text-gray-300">Duração</div>
+              <div class="text-sm text-gray-300">Duration</div>
               <div class="font-semibold">{{ getComplexityInfo(selectedComplexity).duration }}</div>
             </div>
             <div class="bg-gray-700 rounded-lg p-4 text-center">
               <div class="text-2xl mb-2">📅</div>
-              <div class="text-sm text-gray-300">Sessões</div>
+              <div class="text-sm text-gray-300">Sessions</div>
               <div class="font-semibold">{{ getComplexityInfo(selectedComplexity).sessions }}</div>
             </div>
           </div>
@@ -215,25 +215,25 @@
             <a :href="campaignResult.campaign_url" target="_blank"
               class="flex-1 px-8 py-4 bg-gradient-to-r from-green-500 to-teal-500 rounded-xl font-semibold text-lg hover:from-green-600 hover:to-teal-600 transition transform hover:scale-105 flex items-center justify-center space-x-3 text-center">
               <span>📥</span>
-              <span>Download da Campanha</span>
+              <span>Download Campaign</span>
             </a>
 
             <button @click="downloadFormattedPDF"
               class="flex-1 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl font-semibold text-lg hover:from-blue-600 hover:to-purple-600 transition transform hover:scale-105 flex items-center justify-center space-x-3">
               <span>🖨️</span>
-              <span>Download PDF Formatado</span>
+              <span>Download Formatted PDF</span>
             </button>
 
             <button @click="generateNewCampaign"
               class="flex-1 px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl font-semibold text-lg hover:from-purple-600 hover:to-pink-600 transition transform hover:scale-105 flex items-center justify-center space-x-3">
               <span>🎲</span>
-              <span>Nova Campanha</span>
+              <span>New Campaign</span>
             </button>
           </div>
 
           <!-- Job Info -->
           <div class="mt-6 text-center text-sm text-gray-400">
-            <p class="mt-1">Tempo total de processamento: {{ formatTime(processingTime) }}</p>
+            <p class="mt-1">Total processing time: {{ formatTime(processingTime) }}</p>
           </div>
         </div>
 
@@ -243,11 +243,11 @@
           <div class="flex items-center space-x-4">
             <span class="text-3xl">❌</span>
             <div>
-              <h3 class="font-semibold text-red-400 text-xl">Erro ao gerar campanha</h3>
+              <h3 class="font-semibold text-red-400 text-xl">Error generating campaign</h3>
               <p class="text-red-300 mt-2">{{ errorMessage }}</p>
               <button v-if="jobId" @click="retryPolling"
                 class="mt-4 px-4 py-2 bg-red-700 rounded-lg hover:bg-red-600 transition text-sm">
-                Tentar novamente
+                Try Again
               </button>
             </div>
           </div>
@@ -257,7 +257,7 @@
         <div class="mt-12 text-center">
           <button @click="loadExample" :disabled="isLoading || isPolling"
             class="px-8 py-4 bg-gray-700 bg-opacity-50 border-2 border-gray-600 rounded-xl hover:bg-gray-600 hover:border-gray-500 transition text-gray-300 text-lg font-semibold">
-            🎯 Ver Exemplo de Campanha
+            🎯 View Campaign Example
           </button>
         </div>
       </div>
@@ -267,15 +267,15 @@
     <footer class="bg-gray-900 bg-opacity-50 border-t border-gray-700 mt-16">
       <div class="container mx-auto px-4 py-8 text-center">
         <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <p class="text-gray-400">RPG Campaign Generator - Transforme livros em aventuras épicas</p>
+          <p class="text-gray-400">RPG Campaign Generator - Transform books into epic adventures</p>
           <div class="flex space-x-4">
             <button @click="printCampaign" v-if="campaignResult && !isPolling"
               class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
-              🖨️ Imprimir
+              🖨️ Print
             </button>
             <button @click="copyToClipboard" v-if="campaignResult && !isPolling"
               class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
-              📋 Copiar
+              📋 Copy
             </button>
           </div>
         </div>
@@ -293,7 +293,7 @@ export default {
   data() {
     return {
       selectedFile: null,
-      selectedLanguage: 'pt',
+      selectedLanguage: 'en',
       selectedComplexity: 'mediana',
       isLoading: false,
       isPolling: false,
@@ -305,32 +305,53 @@ export default {
       jobId: null,
       pollingInterval: null,
       pollingAttempts: 0,
-      maxPollingAttempts: 300, // 5 minutos (300 * 1 segundo)
+      maxPollingAttempts: 300, // 5 minutes (300 * 1 second)
       pollingStartTime: null,
       pollingElapsedTime: 0,
       pollingProgress: '0%',
       pollingProgressPercentage: 0,
-      pollingMessage: 'Aguardando processamento...',
+      pollingMessage: 'Waiting for processing...',
       processingTime: 0,
 
       languages: [
-        { code: 'pt', name: 'Português' },
-        { code: 'en', name: 'English' },
-        { code: 'es', name: 'Español' },
-        { code: 'fr', name: 'Français' },
-        { code: 'de', name: 'Deutsch' },
-        { code: 'it', name: 'Italiano' },
-        { code: 'ja', name: '日本語' },
-        { code: 'ko', name: '한국어' },
-        { code: 'zh', name: '中文' },
-        { code: 'ru', name: 'Русский' }
+        { code: 'pt', name: 'Portuguese', backendCode: 'pt' },
+        { code: 'en', name: 'English', backendCode: 'en' },
+        { code: 'es', name: 'Spanish', backendCode: 'es' },
+        { code: 'fr', name: 'French', backendCode: 'fr' },
+        { code: 'de', name: 'German', backendCode: 'de' },
+        { code: 'it', name: 'Italian', backendCode: 'it' },
+        { code: 'ja', name: 'Japanese', backendCode: 'ja' },
+        { code: 'ko', name: 'Korean', backendCode: 'ko' },
+        { code: 'zh', name: 'Chinese', backendCode: 'zh' },
+        { code: 'ru', name: 'Russian', backendCode: 'ru' }
       ],
 
       complexities: [
-        { id: 'simples', name: 'Campanha Simples', sessions: '1-2 sessões', description: 'História direta e objetiva, perfeita para oneshots', duration: '3-8 horas', focus: 'Combate e objetivos claros' },
-        { id: 'mediana', name: 'Campanha Mediana', sessions: '3-4 sessões', description: 'Equilíbrio entre combate, exploração e desenvolvimento', duration: '9-16 horas', focus: 'História com ramificações' },
-        { id: 'complexa', name: 'Campanha Complexa', sessions: '5+ sessões', description: 'Arco épico com múltiplos caminhos e consequências', duration: '17+ horas', focus: 'Narrativa profunda' }
-      ]
+        { id: 'simple', backendId: 'simples', name: 'Simple Campaign', sessions: '1-2 sessions', description: 'Straightforward story, perfect for oneshots', duration: '3-8 hours', focus: 'Combat and clear objectives' },
+        { id: 'medium', backendId: 'mediana', name: 'Medium Campaign', sessions: '3-4 sessions', description: 'Balance between combat, exploration, and development', duration: '9-16 hours', focus: 'Story with branching paths' },
+        { id: 'complex', backendId: 'complexa', name: 'Complex Campaign', sessions: '5+ sessions', description: 'Epic arc with multiple paths and consequences', duration: '17+ hours', focus: 'Deep narrative' }
+      ],
+
+      // Mapeamento para converter código de idioma frontend para backend
+      languageMapping: {
+        'en': 'en',
+        'pt': 'pt',
+        'es': 'es',
+        'fr': 'fr',
+        'de': 'de',
+        'it': 'it',
+        'ja': 'ja',
+        'ko': 'ko',
+        'zh': 'zh',
+        'ru': 'ru'
+      },
+
+      // Mapeamento para converter complexidade frontend para backend
+      complexityMapping: {
+        'simple': 'simples',
+        'medium': 'mediana',
+        'complex': 'complexa'
+      }
     };
   },
 
@@ -338,7 +359,7 @@ export default {
     formattedCampaign() {
       if (!this.campaignContent) return '';
 
-      // Configurar marked para renderização segura
+      // Configure marked for safe rendering
       marked.setOptions({
         breaks: true,
         gfm: true,
@@ -346,6 +367,15 @@ export default {
       });
 
       return marked(this.campaignContent);
+    },
+
+    // Computed properties to get backend values
+    backendLanguage() {
+      return this.languageMapping[this.selectedLanguage] || 'en';
+    },
+
+    backendComplexity() {
+      return this.complexityMapping[this.selectedComplexity] || 'mediana';
     }
   },
 
@@ -370,7 +400,7 @@ export default {
           this.selectedFile = file;
           this.errorMessage = '';
         } else {
-          this.errorMessage = 'Por favor, selecione um arquivo PDF.';
+          this.errorMessage = 'Please select a PDF file.';
         }
       }
     },
@@ -386,7 +416,7 @@ export default {
           this.selectedFile = file;
           this.errorMessage = '';
         } else {
-          this.errorMessage = 'Por favor, solte um arquivo PDF.';
+          this.errorMessage = 'Please drop a PDF file.';
         }
       }
     },
@@ -408,7 +438,7 @@ export default {
     // Campaign generation
     async generateCampaign() {
       if (!this.selectedFile) {
-        this.errorMessage = 'Por favor, selecione um arquivo PDF.';
+        this.errorMessage = 'Please select a PDF file.';
         return;
       }
 
@@ -424,12 +454,14 @@ export default {
       this.pollingElapsedTime = 0;
       this.pollingProgress = '0%';
       this.pollingProgressPercentage = 0;
-      this.pollingMessage = 'Aguardando processamento...';
+      this.pollingMessage = 'Waiting for processing...';
 
       const formData = new FormData();
       formData.append('file', this.selectedFile);
-      formData.append('target_language', this.selectedLanguage);
-      formData.append('complexity', this.selectedComplexity);
+      
+      // Usar os valores em português para o backend
+      formData.append('target_language', this.backendLanguage);
+      formData.append('complexity', this.backendComplexity);
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -441,34 +473,34 @@ export default {
         });
 
         if (response.status === 202 && response.data.job_id) {
-          // Processamento assíncrono iniciado
+          // Async processing started
           this.jobId = response.data.job_id;
           this.isLoading = false;
           this.isPolling = true;
 
-          // Iniciar polling
+          // Start polling
           this.startPolling();
         } else if (response.data.success && response.data.status === 'completed') {
-          // Processamento síncrono (fallback sem Redis)
+          // Sync processing (Redis fallback)
           this.isLoading = false;
           this.handleCampaignSuccess(response.data);
         } else {
-          this.errorMessage = response.data.error || 'Erro ao iniciar processamento.';
+          this.errorMessage = response.data.error || 'Error starting processing.';
           this.isLoading = false;
         }
       } catch (error) {
-        console.error('Erro ao gerar campanha:', error);
+        console.error('Error generating campaign:', error);
         this.handleCampaignError(error);
         this.isLoading = false;
       }
     },
 
     startPolling() {
-      this.stopPolling(); // Limpar qualquer polling anterior
+      this.stopPolling(); // Clear any previous polling
 
       this.pollingInterval = setInterval(() => {
         this.pollJobStatus();
-      }, 2000); // Verificar a cada 2 segundos
+      }, 2000); // Check every 2 seconds
     },
 
     stopPolling() {
@@ -499,7 +531,7 @@ export default {
       try {
         const { data: statusData } = await axios.get(
           `${apiUrl}/job-status/${this.jobId}`
-                );
+        );
 
         const result = statusData.result;
 
@@ -508,46 +540,45 @@ export default {
           this.isPolling = false;
           this.processingTime = this.pollingElapsedTime;
 
-          // ⬇️ URL direta do S3
+          // ⬇️ Direct S3 URL
           const campaignUrl = result?.campaign_url;
 
-          // Buscar conteúdo direto do S3
+          // Fetch content directly from S3
           await this.fetchFullCampaign(campaignUrl);
 
           this.campaignResult = {
             job_id: this.jobId,
             campaign_url: campaignUrl,
             preview: result?.preview,
-            message: 'Campanha gerada com sucesso!'
+            message: 'Campaign generated successfully!'
           };
 
         } else if (statusData.status === 'failed') {
           this.stopPolling();
           this.isPolling = false;
           this.errorMessage =
-            result?.error || statusData.message || 'Processamento falhou';
+            result?.error || statusData.message || 'Processing failed';
 
         } else if (statusData.status === 'processing') {
-          this.pollingMessage = result?.progress || 'Processando...';
+          this.pollingMessage = result?.progress || 'Processing...';
           this.pollingAttempts++;
 
         } else if (statusData.status === 'queued') {
-          this.pollingMessage = 'Na fila de processamento...';
+          this.pollingMessage = 'Queued for processing...';
           this.pollingAttempts++;
         }
 
       } catch (error) {
-        console.error('Erro ao verificar status:', error);
+        console.error('Error checking status:', error);
         this.pollingAttempts++;
 
         if (this.pollingAttempts >= 10) {
           this.stopPolling();
           this.isPolling = false;
-          this.errorMessage = 'Erro ao verificar status do processamento.';
+          this.errorMessage = 'Error checking processing status.';
         }
       }
     },
-
 
     async fetchFullCampaign(campaignUrl) {
       if (!campaignUrl) return;
@@ -560,32 +591,31 @@ export default {
         this.campaignContent = response.data;
 
       } catch (error) {
-        console.error('Erro ao buscar campanha:', error);
+        console.error('Error fetching campaign:', error);
 
         if (this.campaignResult?.preview) {
           this.campaignContent = this.campaignResult.preview;
         } else {
-          this.campaignContent = 'Conteúdo da campanha não disponível.';
+          this.campaignContent = 'Campaign content not available.';
         }
       }
     },
 
-
     handleCampaignSuccess(data) {
       this.campaignResult = data;
-      this.campaignContent = data.preview || 'Campanha gerada com sucesso!';
-      this.processingTime = 0; // Processamento instantâneo
+      this.campaignContent = data.preview || 'Campaign generated successfully!';
+      this.processingTime = 0; // Instant processing
     },
 
     handleCampaignError(error) {
       if (error.response?.data?.error) {
         this.errorMessage = error.response.data.error;
       } else if (error.code === 'ECONNABORTED') {
-        this.errorMessage = 'Tempo limite excedido. Tente novamente com um arquivo menor.';
+        this.errorMessage = 'Timeout exceeded. Try again with a smaller file.';
       } else if (error.message.includes('Network Error')) {
-        this.errorMessage = 'Erro de conexão. Verifique se o servidor está rodando.';
+        this.errorMessage = 'Connection error. Check if the server is running.';
       } else {
-        this.errorMessage = 'Erro ao processar a requisição. Tente novamente.';
+        this.errorMessage = 'Error processing request. Please try again.';
       }
     },
 
@@ -609,13 +639,13 @@ export default {
       if (!this.campaignContent) return;
 
       try {
-        // Usar a API do browser para imprimir como PDF
+        // Use browser API to print as PDF
         const printWindow = window.open('', '_blank');
         const formattedContent = `
           <!DOCTYPE html>
           <html>
             <head>
-              <title>Campanha RPG - ${this.getComplexityInfo(this.selectedComplexity).name}</title>
+              <title>RPG Campaign - ${this.getComplexityInfo(this.selectedComplexity).name}</title>
               <style>
                 body { 
                   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -693,10 +723,10 @@ export default {
             <body>
               <div class="header">
                 <h1>🎲 ${this.getComplexityInfo(this.selectedComplexity).name}</h1>
-                <p><strong>Idioma:</strong> ${this.getLanguageName(this.selectedLanguage)} | 
-                   <strong>Duração:</strong> ${this.getComplexityInfo(this.selectedComplexity).duration} | 
-                   <strong>Sessões:</strong> ${this.getComplexityInfo(this.selectedComplexity).sessions}</p>
-                <p><em>Gerado em ${new Date().toLocaleDateString('pt-BR')}</em></p>
+                <p><strong>Language:</strong> ${this.getLanguageName(this.selectedLanguage)} | 
+                   <strong>Duration:</strong> ${this.getComplexityInfo(this.selectedComplexity).duration} | 
+                   <strong>Sessions:</strong> ${this.getComplexityInfo(this.selectedComplexity).sessions}</p>
+                <p><em>Generated on ${new Date().toLocaleDateString('en-US')}</em></p>
               </div>
               <div>${this.formattedCampaign}</div>
             </body>
@@ -706,13 +736,13 @@ export default {
         printWindow.document.write(formattedContent);
         printWindow.document.close();
 
-        // Aguardar o conteúdo carregar antes de imprimir
+        // Wait for content to load before printing
         printWindow.onload = () => {
           printWindow.print();
         };
       } catch (error) {
-        console.error('Erro ao gerar PDF:', error);
-        // Fallback para impressão normal
+        console.error('Error generating PDF:', error);
+        // Fallback to normal printing
         window.print();
       }
     },
@@ -721,12 +751,12 @@ export default {
       const complexityInfo = this.getComplexityInfo(this.selectedComplexity);
       return `# 🎲 ${complexityInfo.name}
 
-**Idioma:** ${this.getLanguageName(this.selectedLanguage)}  
-**Complexidade:** ${this.selectedComplexity}  
-**Sessões:** ${complexityInfo.sessions}  
-**Duração:** ${complexityInfo.duration}  
-**Gerado em:** ${new Date().toLocaleDateString('pt-BR')}
-**Tempo de processamento:** ${this.formatTime(this.processingTime)}
+**Language:** ${this.getLanguageName(this.selectedLanguage)}  
+**Complexity:** ${this.getComplexityDisplayName(this.selectedComplexity)}  
+**Sessions:** ${complexityInfo.sessions}  
+**Duration:** ${complexityInfo.duration}  
+**Generated on:** ${new Date().toLocaleDateString('en-US')}
+**Processing time:** ${this.formatTime(this.processingTime)}
 
 ---
 
@@ -734,8 +764,8 @@ ${this.campaignContent}
 
 ---
 
-*Campanha gerada automaticamente pelo RPG Campaign Generator*  
-*Sistema baseado no livro de RPG analisado - balanceamento pode precisar de ajustes para seu grupo específico.*
+*Campaign automatically generated by RPG Campaign Generator*  
+*System based on the analyzed RPG book - balancing may need adjustments for your specific group.*
 `;
     },
 
@@ -755,18 +785,18 @@ ${this.campaignContent}
       try {
         const response = await axios.get(`${apiUrl}/example-campaign`, {
           params: {
-            complexity: this.selectedComplexity,
-            language: this.selectedLanguage
+            complexity: this.backendComplexity,
+            language: this.backendLanguage
           },
         });
 
         if (response.data.success) {
           this.campaignResult = response.data;
-          this.campaignContent = response.data.content || 'Exemplo de campanha carregado.';
+          this.campaignContent = response.data.content || 'Example campaign loaded.';
         }
       } catch (error) {
-        console.error('Erro ao carregar exemplo:', error);
-        this.errorMessage = 'Erro ao carregar exemplo.';
+        console.error('Error loading example:', error);
+        this.errorMessage = 'Error loading example.';
       } finally {
         this.isLoading = false;
       }
@@ -786,6 +816,11 @@ ${this.campaignContent}
       return this.complexities.find(c => c.id === complexityId) || this.complexities[1];
     },
 
+    getComplexityDisplayName(complexityId) {
+      const info = this.getComplexityInfo(complexityId);
+      return info ? info.name : complexityId;
+    },
+
     getLanguageName(languageCode) {
       const lang = this.languages.find(l => l.code === languageCode);
       return lang ? lang.name : languageCode;
@@ -797,13 +832,11 @@ ${this.campaignContent}
       try {
         const response = await axios.get(`${apiUrl}/campaign-complexities`);
         if (response.data) {
-          this.complexities = Object.entries(response.data).map(([id, data]) => ({
-            id,
-            ...data
-          }));
+          // Keep our frontend complexities but update from backend if needed
+          console.log('Complexities from backend:', response.data);
         }
       } catch (error) {
-        console.log('Usando complexidades padrão');
+        console.log('Using default complexities');
       }
     },
 
@@ -815,10 +848,10 @@ ${this.campaignContent}
       try {
         const formattedContent = this.createFormattedContent();
         await navigator.clipboard.writeText(formattedContent);
-        alert('Campanha copiada para a área de transferência!');
+        alert('Campaign copied to clipboard!');
       } catch (error) {
-        console.error('Erro ao copiar:', error);
-        alert('Erro ao copiar para a área de transferência.');
+        console.error('Error copying:', error);
+        alert('Error copying to clipboard.');
       }
     }
   }
