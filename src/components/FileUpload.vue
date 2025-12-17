@@ -438,7 +438,6 @@ export default {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-          timeout: 30000, // 30 segundos para upload
         });
 
         if (response.status === 202 && response.data.job_id) {
@@ -499,9 +498,8 @@ export default {
 
       try {
         const { data: statusData } = await axios.get(
-          `${apiUrl}/job-status/${this.jobId}`,
-          { timeout: 10000 }
-        );
+          `${apiUrl}/job-status/${this.jobId}`
+                );
 
         const result = statusData.result;
 
@@ -557,7 +555,6 @@ export default {
       try {
         const response = await axios.get(campaignUrl, {
           responseType: 'text',
-          timeout: 30000
         });
 
         this.campaignContent = response.data;
