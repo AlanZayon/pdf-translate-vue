@@ -1,10 +1,56 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + Vue</title>
+    <meta name="description" content="Forge ready-to-play RPG campaigns from any rulebook PDF with Arcane Forge. AI-powered campaign generator for D&amp;D, Pathfinder, and more." />
+    <meta name="theme-color" content="#08080c" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://arcaneforge.app/" />
+    <meta property="og:title" content="Arcane Forge — RPG Campaign Generator" />
+    <meta property="og:description" content="Transform rulebook PDFs into complete, GM-ready RPG campaigns in minutes." />
+    <meta property="og:image" content="https://arcaneforge.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Arcane Forge — RPG Campaign Generator" />
+    <meta name="twitter:description" content="Transform rulebook PDFs into complete, GM-ready RPG campaigns in minutes." />
+    <meta name="twitter:image" content="https://arcaneforge.app/og-image.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Arcane Forge",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web",
+        "description": "AI-powered RPG campaign generator from PDF rulebooks",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+
+    <title>Arcane Forge — RPG Campaign Generator</title>
+    <script>
+      (function () {
+        var key = 'arcane-theme';
+        var stored = localStorage.getItem(key);
+        var pref = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'dark';
+        var dark =
+          pref === 'dark' ||
+          (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', dark ? '#08080c' : '#faf6ef');
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

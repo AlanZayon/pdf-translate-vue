@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-void: var(--palette-void);
+  --color-surface: var(--palette-surface);
+  --color-surface-alt: var(--palette-surface-alt);
+  --color-gold: var(--palette-gold);
+  --color-gold-dim: var(--palette-gold-dim);
+  --color-ember: var(--palette-ember);
+  --color-mist: var(--palette-mist);
+  --color-parchment: var(--palette-parchment);
+  --color-parchment-dark: var(--palette-parchment-dark);
+  --color-text: var(--palette-text);
+  --color-muted: var(--palette-muted);
+  --color-success: #4ade80;
+  --color-danger: #f87171;
+
+  --font-display: 'Cinzel', Georgia, serif;
+  --font-body: 'Instrument Sans', system-ui, sans-serif;
+
+  --shadow-gold: var(--palette-shadow-gold);
+  --shadow-gold-lg: var(--palette-shadow-gold-lg);
+}
+
+/* Light mode (default class absent) */
+:root {
+  --palette-void: #faf6ef;
+  --palette-surface: #ffffff;
+  --palette-surface-alt: #f0ebe3;
+  --palette-gold: #9a7b1c;
+  --palette-gold-dim: #7a6216;
+  --palette-ember: #c45a20;
+  --palette-mist: #6b5b95;
+  --palette-parchment: #2c2416;
+  --palette-parchment-dark: #f5eed6;
+  --palette-text: #1a1520;
+  --palette-muted: #6b6570;
+  --palette-shadow-gold: 0 0 20px rgba(154, 123, 28, 0.15);
+  --palette-shadow-gold-lg: 0 0 32px rgba(154, 123, 28, 0.22);
+}
+
+/* Dark mode — Arcane Forge */
+html.dark {
+  --palette-void: #08080c;
+  --palette-surface: #12101a;
+  --palette-surface-alt: #1c1726;
+  --palette-gold: #c9a227;
+  --palette-gold-dim: #9a7b1c;
+  --palette-ember: #e8743a;
+  --palette-mist: #9b8ec4;
+  --palette-parchment: #e8dcc8;
+  --palette-parchment-dark: #1a1612;
+  --palette-text: #f0ebe3;
+  --palette-muted: #8a8494;
+  --palette-shadow-gold: 0 0 24px rgba(201, 162, 39, 0.25);
+  --palette-shadow-gold-lg: 0 0 40px rgba(201, 162, 39, 0.35);
+}

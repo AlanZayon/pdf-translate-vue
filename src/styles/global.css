@@ -1,0 +1,199 @@
+/* Base */
+body {
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background-color: var(--color-void);
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Light: warm ambient glow */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(154, 123, 28, 0.06) 0%, transparent 55%),
+    radial-gradient(circle at 80% 80%, rgba(196, 90, 32, 0.04) 0%, transparent 40%);
+  transition: opacity 0.3s ease;
+}
+
+html.dark body::before {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201, 162, 39, 0.08) 0%, transparent 55%),
+    radial-gradient(circle at 20% 80%, rgba(155, 142, 196, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 80% 60%, rgba(232, 116, 58, 0.04) 0%, transparent 35%);
+}
+
+/* Starfield — dark mode only */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.6) 1px, transparent 1px);
+  background-size: 48px 48px;
+  transition: opacity 0.3s ease;
+}
+
+html.dark body::after {
+  opacity: 0.35;
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Transitions */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(201, 162, 39, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(201, 162, 39, 0.55);
+  }
+}
+
+html:not(.dark) .animate-pulse-glow {
+  animation: pulse-glow-light 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow-light {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(154, 123, 28, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(154, 123, 28, 0.35);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-slide-enter-active,
+  .fade-slide-leave-active {
+    transition: none;
+  }
+
+  .animate-pulse-glow {
+    animation: none;
+  }
+
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Campaign manuscript prose */
+.manuscript-prose {
+  color: var(--color-parchment);
+  line-height: 1.75;
+}
+
+.manuscript-prose :deep(h1) {
+  font-family: var(--font-display);
+  color: var(--color-gold);
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
+}
+
+.manuscript-prose :deep(h2) {
+  font-family: var(--font-display);
+  color: var(--color-ember);
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.manuscript-prose :deep(h3) {
+  color: var(--color-mist);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+}
+
+.manuscript-prose :deep(p) {
+  margin-bottom: 0.85rem;
+}
+
+.manuscript-prose :deep(strong) {
+  color: var(--color-gold);
+}
+
+.manuscript-prose :deep(ul),
+.manuscript-prose :deep(ol) {
+  padding-left: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.manuscript-prose :deep(li) {
+  margin-bottom: 0.35rem;
+}
+
+.manuscript-prose :deep(blockquote) {
+  border-left: 3px solid var(--color-gold-dim);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  opacity: 0.85;
+  font-style: italic;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gold-dim);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+@media print {
+  body::before,
+  body::after {
+    display: none;
+  }
+}
