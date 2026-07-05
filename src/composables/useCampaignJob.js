@@ -196,6 +196,11 @@ export function useCampaignJob(options = {}) {
     if (prefs.partyLevel) formData.append('party_level', prefs.partyLevel);
     if (prefs.tone) formData.append('tone', prefs.tone);
     if (prefs.theme) formData.append('theme', prefs.theme);
+    if (prefs.useCharacterSheets) {
+      formData.append('use_character_sheets', 'true');
+      formData.append('party_size', String(prefs.partySize || 3));
+      (prefs.sheetFiles || []).forEach((f) => formData.append('sheet_files', f));
+    }
 
     const idempotencyKey = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 

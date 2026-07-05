@@ -1,16 +1,27 @@
 <script setup>
+import { computed } from 'vue';
+
 const props = defineProps({
   currentStep: { type: Number, default: 1 },
   maxReached: { type: Number, default: 1 },
+  useCharacterSheets: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['go-to']);
 
-const steps = [
-  { id: 1, label: 'Forge Settings' },
-  { id: 2, label: 'Tome Upload' },
-  { id: 3, label: 'Your Campaign' },
-];
+const steps = computed(() => {
+  const base = [
+    { id: 1, label: 'Forge Settings' },
+    { id: 2, label: 'Tome Upload' },
+  ];
+  if (props.useCharacterSheets) {
+    base.push({ id: 3, label: 'Character Sheets' });
+    base.push({ id: 4, label: 'Your Campaign' });
+  } else {
+    base.push({ id: 3, label: 'Your Campaign' });
+  }
+  return base;
+});
 
 function canNavigate(stepId) {
   return stepId <= props.maxReached && stepId !== props.currentStep;

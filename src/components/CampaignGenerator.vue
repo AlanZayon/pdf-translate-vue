@@ -19,6 +19,8 @@ import { useFileUpload } from '../composables/useFileUpload.js';
 import { useMetadata } from '../composables/useMetadata.js';
 import { useToast } from '../composables/useToast.js';
 import CampaignPreferences from './configure/CampaignPreferences.vue';
+import CharacterSheetsToggle from './configure/CharacterSheetsToggle.vue';
+import CharacterSheetUpload from './sheets/CharacterSheetUpload.vue';
 import { fetchExampleCampaign, fetchMe, fetchSystemPresets, fetchDetectSystem, COMPLEXITY_MAP } from '../services/campaignApi.js';
 import { trackEvent } from '../composables/useAnalytics.js';
 import { ChevronLeft, ChevronRight, Sparkles } from '@lucide/vue';
@@ -38,6 +40,9 @@ const partyLevel = ref('');
 const tone = ref('heroic');
 const theme = ref('');
 const detectedPreset = ref(null);
+const useCharacterSheets = ref(false);
+const partySize = ref(3);
+const sheetFiles = ref([]);
 
 const CREDIT_COST = { simple: 1, medium: 2, complex: 4 };
 
@@ -110,8 +115,8 @@ const creditsUsed = computed(() => {
 
 watch([campaignResult, campaignContent], ([result, content]) => {
   if (result && content) {
-    currentStep.value = 3;
-    maxReached.value = 3;
+    currentStep.value = resultStep.value;
+    maxReached.value = Math.max(maxReached.value, resultStep.value);
     trackEvent('generate_complete', { complexity: selectedComplexity.value });
   }
 });
@@ -123,6 +128,35 @@ watch(isPolling, (polling) => {
 const creditCost = computed(() => CREDIT_COST[selectedComplexity.value] || 2);
 const creditsRemaining = computed(() => account.value?.credits_balance ?? 0);
 const isPriority = computed(() => ['pro', 'studio'].includes(account.value?.plan));
+
+const maxWizardStep = computed(() => (useCharacterSheets.value ? 3 : 2));
+const resultStep = computed(() => (useCharacterSheets.value ? 4 : 3));
+const allSheetsFilled = computed(() => {
+  if (!useCharacterSheets.value) return true;
+  return sheetFiles.value.filter(Boolean).length >= partySize.value;
+});
+
+watch(partySize, (n) => {
+  const size = Math.max(1, Math.min(5, Number(n) || 3));
+  const current = [...sheetFiles.value];
+  while (current.length < size) current.push(null);
+  sheetFiles.value = current.slice(0, size);
+}, { immediate: true });
+
+watch(useCharacterSheets, (on) => {
+  if (!on) {
+    sheetFiles.value = [];
+  }
+});
+
+function onLockedCharacterSheets() {
+  upgradePayload.value = {
+    error: 'plan_restriction',
+    message: 'Character sheets require Pro or Studio.',
+  };
+  upgradeOpen.value = true;
+  trackEvent('soft_paywall_shown', { feature: 'character_sheets' });
+}
 
 function onLockedComplexity() {
   upgradePayload.value = { error: 'plan_restriction', message: 'Medium and Complex campaigns require Pro.' };
@@ -166,7 +200,7 @@ function goToStep(step) {
 }
 
 function nextStep() {
-  if (currentStep.value < 3) {
+  if (currentStep.value < maxWizardStep.value) {
     currentStep.value += 1;
     maxReached.value = Math.max(maxReached.value, currentStep.value);
   }
@@ -187,7 +221,14 @@ async function onGenerate() {
     selectedLanguage.value,
     selectedComplexity.value,
     selectedPreset.value,
-    { partyLevel: partyLevel.value, tone: tone.value, theme: theme.value },
+    {
+      partyLevel: partyLevel.value,
+      tone: tone.value,
+      theme: theme.value,
+      useCharacterSheets: useCharacterSheets.value,
+      partySize: partySize.value,
+      sheetFiles: sheetFiles.value.filter(Boolean),
+    },
   );
   try {
     account.value = await fetchMe();
@@ -210,8 +251,8 @@ async function onLoadExample() {
     if (data.success) {
       campaignResult.value = { content: data.content };
       campaignContent.value = data.content || '';
-      currentStep.value = 3;
-      maxReached.value = 3;
+      currentStep.value = resultStep.value;
+      maxReached.value = resultStep.value;
     }
   } catch {
     errorMessage.value = 'Error loading example campaign.';
@@ -226,6 +267,9 @@ function onNewCampaign() {
   currentStep.value = 1;
   maxReached.value = 1;
   uploadConsent.value = false;
+  useCharacterSheets.value = false;
+  partySize.value = 3;
+  sheetFiles.value = [];
 }
 
 function clearError() {
@@ -283,8 +327,9 @@ onMounted(async () => {
 
         <StepIndicator
           v-if="showWizard || isPolling || showResult"
-          :current-step="isPolling ? 2 : currentStep"
+          :current-step="isPolling ? (useCharacterSheets ? 3 : 2) : currentStep"
           :max-reached="maxReached"
+          :use-character-sheets="useCharacterSheets"
           @go-to="goToStep"
         />
 
@@ -330,6 +375,12 @@ onMounted(async () => {
                 Detected from your PDF: {{ systemPresets[detectedPreset]?.name || detectedPreset }}
               </p>
               <CampaignPreferences v-model:party-level="partyLevel" v-model:tone="tone" v-model:theme="theme" />
+              <CharacterSheetsToggle
+                v-model="useCharacterSheets"
+                v-model:party-size="partySize"
+                :user-plan="account?.plan || 'free'"
+                @locked-click="onLockedCharacterSheets"
+              />
             </div>
             <div class="flex justify-end mt-8">
               <UiButton variant="primary" @click="nextStep">
@@ -377,6 +428,19 @@ onMounted(async () => {
                 Back
               </UiButton>
               <UiButton
+                v-if="useCharacterSheets"
+                variant="primary"
+                size="lg"
+                block
+                class="flex-1"
+                :disabled="!selectedFile || !uploadConsent"
+                @click="nextStep"
+              >
+                Continue to Character Sheets
+                <ChevronRight class="w-5 h-5" aria-hidden="true" />
+              </UiButton>
+              <UiButton
+                v-else
                 variant="primary"
                 size="lg"
                 block
@@ -390,7 +454,7 @@ onMounted(async () => {
               </UiButton>
             </div>
 
-            <p class="text-center mt-6">
+            <p v-if="!useCharacterSheets" class="text-center mt-6">
               <button
                 type="button"
                 class="text-muted hover:text-gold text-sm underline-offset-4 hover:underline transition"
@@ -400,6 +464,44 @@ onMounted(async () => {
                 Or preview an example campaign
               </button>
             </p>
+          </UiCard>
+
+          <UiCard v-else-if="showWizard && currentStep === 3 && useCharacterSheets" key="step3" glow>
+            <h3 class="font-display text-xl text-gold mb-2">Character Sheets</h3>
+            <p class="text-muted text-sm mb-6">
+              Upload {{ partySize }} character sheet PDF{{ partySize > 1 ? 's' : '' }} for your party.
+            </p>
+
+            <CharacterSheetUpload
+              :party-size="partySize"
+              :sheets="sheetFiles"
+              :disabled="isLoading || isPolling"
+              @update:sheets="sheetFiles = $event"
+            />
+
+            <p class="text-sm text-muted mb-4 text-center mt-6">
+              This will use <strong class="text-gold">{{ creditCost }} credit{{ creditCost > 1 ? 's' : '' }}</strong>
+              · {{ creditsRemaining }} remaining
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-3 mt-4">
+              <UiButton variant="ghost" @click="prevStep">
+                <ChevronLeft class="w-5 h-5" aria-hidden="true" />
+                Back
+              </UiButton>
+              <UiButton
+                variant="primary"
+                size="lg"
+                block
+                class="flex-1"
+                :disabled="!selectedFile || !allSheetsFilled || isLoading || isPolling"
+                :loading="isLoading || isPolling"
+                @click="onGenerate"
+              >
+                <Sparkles class="w-5 h-5" aria-hidden="true" />
+                Begin the Ritual
+              </UiButton>
+            </div>
           </UiCard>
         </Transition>
 
