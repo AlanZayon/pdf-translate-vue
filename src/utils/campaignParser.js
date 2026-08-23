@@ -1,28 +1,40 @@
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import {
+  SESSION_HEADING,
+  SESSION_COUNT,
+  OVERVIEW_HEADING,
+  HOOK_HEADING,
+  NPC_HEADING,
+  ENEMIES_HEADING,
+  PUZZLES_HEADING,
+  ENDINGS_HEADING,
+  MAPS_HEADING,
+  REWARDS_HEADING,
+  INSPIRED_HEADING,
+  CHECKLIST_HEADING,
+  KNOWN_SECTION_TITLE,
+  OBJECTIVES,
+  ROLE_LINE,
+  sessionNumber,
+} from './campaignI18n.js';
 
-const SESSION_HEADING = /^(?:session|sessão|sessao)\s*#?\s*(\d+)/i;
-const OVERVIEW_HEADING = /overview|visão geral|visao geral|sinopse/i;
-const HOOK_HEADING = /starting hook|gancho|hook inicial|opening hook/i;
-const NPC_HEADING = /important npcs?|npcs?|personagens|pnjs?/i;
-const REWARDS_HEADING = /rewards?|recompensas?|treasure|tesouro/i;
-const INSPIRED_HEADING = /inspired by|inspirado/i;
+const WRAPPER_TITLE = /^RPG Campaign\b/i;
 const NPC_LINE = /^[-*]\s+\*\*(.+?)\*\*[:\s—–-]+(.+)$/gm;
-const OBJECTIVES = /\*\*(?:objectives?|objetivos?)[:\s]*\*\*[:\s]*([\s\S]+?)(?=\n\*\*|\n##|$)/i;
-const SCENE = /\*\*(?:scene|scena|cena)\s*([A-Z0-9])?[:\s—–-]*\*\*[:\s—–-]*([\s\S]+?)(?=\n\*\*(?:scene|scena|cena|combat|puzzle|boss)|\n##|$)/gi;
-const COMBAT = /\*\*(?:combat|combate|boss)[:\s]*\*\*[:\s]*([\s\S]+?)(?=\n\*\*|\n##|$)/i;
-const PUZZLE = /\*\*(?:puzzle|quebra-cabeça|enigma)[:\s]*\*\*[:\s]*([\s\S]+?)(?=\n\*\*|\n##|$)/i;
+const TAG_FROM_HEADING = /\(([^)]+)\)\s*$/;
 
 export function wordCount(text) {
   return (text.match(/\w+/g) || []).length;
 }
 
 export function countSessions(text) {
-  const matches = [...text.matchAll(/(?:session|sessão|sessao)\s*#?\s*(\d+)/gi)];
-  if (matches.length) {
-    return Math.max(...matches.map((m) => parseInt(m[1], 10)));
+  const nums = [...(text || '').matchAll(new RegExp(SESSION_COUNT.source, 'gi'))]
+    .map((m) => parseInt(m[1] || m[2] || m[3], 10))
+    .filter((n) => Number.isFinite(n));
+  if (nums.length) {
+    return Math.max(...nums);
   }
-  return (text.match(/##\s*(?:Session|Sessão|Sessao)\s*\d/gi) || []).length;
+  return 0;
 }
 
 export function slugifyTitle(title, maxLen = 60) {
@@ -36,9 +48,33 @@ export function slugifyTitle(title, maxLen = 60) {
   );
 }
 
+export function cleanHeadingText(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/^\*{1,2}(.+?)\*{1,2}$/, '$1')
+    .replace(/^`(.+?)`$/, '$1')
+    .trim();
+}
+
 export function extractTitle(content) {
-  const match = content.match(/^#\s+(.+)$/m);
-  return match ? match[1].trim() : 'Campaign';
+  const matches = [...(content || '').matchAll(/^#\s+(.+)$/gm)].map((m) =>
+    cleanHeadingText(m[1]),
+  );
+  const literary = matches.filter(
+    (t) => !WRAPPER_TITLE.test(t) && !KNOWN_SECTION_TITLE.test(t),
+  );
+  return literary[0] || matches.find((t) => !WRAPPER_TITLE.test(t)) || 'Campaign';
+}
+
+export function sessionTitle(heading) {
+  return cleanHeadingText(heading)
+    .replace(
+      /^(?:session|sessão|sessao|sesión|sesion|séance|sitzung|sessione|セッション|세션|сессия|回合)\s*\d+\s*(?:\([^)]+\))?\s*[:.\-—–]?\s*/i,
+      '',
+    )
+    .replace(/^(?:第)\s*\d+\s*(?:セッション|話|回|节|節|幕)?\s*[:.\-—–]?\s*/i, '')
+    .replace(/^(?:제)\s*\d+\s*세션?\s*[:.\-—–]?\s*/i, '')
+    .trim();
 }
 
 function classifyHeading(heading) {
@@ -46,35 +82,107 @@ function classifyHeading(heading) {
   if (OVERVIEW_HEADING.test(heading)) return 'overview';
   if (HOOK_HEADING.test(heading)) return 'hook';
   if (NPC_HEADING.test(heading)) return 'npcs';
+  if (ENEMIES_HEADING.test(heading)) return 'enemies';
+  if (PUZZLES_HEADING.test(heading)) return 'puzzles';
+  if (ENDINGS_HEADING.test(heading)) return 'endings';
+  if (MAPS_HEADING.test(heading)) return 'maps';
   if (REWARDS_HEADING.test(heading)) return 'rewards';
+  if (CHECKLIST_HEADING.test(heading)) return 'checklist';
   if (INSPIRED_HEADING.test(heading)) return 'inspired';
   return 'generic';
 }
 
-function parseSessionBody(body) {
-  const objectivesMatch = body.match(OBJECTIVES);
-  const scenes = [];
-  let sceneMatch;
-  const sceneRe = new RegExp(SCENE.source, SCENE.flags);
-  while ((sceneMatch = sceneRe.exec(body)) !== null) {
-    scenes.push({ label: (sceneMatch[1] || '').trim(), text: sceneMatch[2].trim() });
-  }
-  const combatMatch = body.match(COMBAT);
-  const puzzleMatch = body.match(PUZZLE);
+function inferTagsFromText(text) {
   const tags = [];
-  if (scenes.length || /social|investigation|talk/i.test(body)) tags.push('Social');
-  if (combatMatch) tags.push('Combat');
-  if (puzzleMatch) tags.push('Puzzle');
+  const lower = text.toLowerCase();
+  if (/\bcombat\b|combate|battle|batalha/.test(lower)) tags.push('Combat');
+  if (/roleplay|interpretação|interpretacao|negotiation|social/.test(lower)) tags.push('Roleplay');
+  if (/puzzle|enigma|quebra-cabeça/.test(lower)) tags.push('Puzzle');
+  if (/investigation|investigação|investigacao/.test(lower)) tags.push('Investigation');
+  return tags;
+}
+
+function classifyBeat(heading) {
+  const h = heading.toLowerCase();
+  if (/encounter|encontro|encuentro|rencontre|begegnung|incontro|遭遇|조우|遭遇|столкновение/i.test(h))
+    return 'encounter';
+  if (/scene|cena|escena|scène|szene|scena|シーン|장면|场景|сцена/i.test(h)) return 'scene';
+  if (/treasure|loot|tesouro|recompensa/.test(h)) return 'treasure';
+  if (/investigation path|path [a-z]|caminho/.test(h)) return 'path';
+  if (/puzzle|enigma/.test(h)) return 'puzzle';
+  if (/ending|final\b/.test(h)) return 'ending';
+  if (/map\b|mapa/.test(h)) return 'map';
+  return 'beat';
+}
+
+function tagsFromHeading(heading) {
+  const match = heading.match(TAG_FROM_HEADING);
+  if (!match) return inferTagsFromText(heading);
+  return inferTagsFromText(match[1]);
+}
+
+export function splitSubheadings(body) {
+  const parts = (body || '').split(/^###\s+(.+)$/m);
+  const intro = (parts[0] || '').trim();
+  const blocks = [];
+  for (let i = 1; i < parts.length - 1; i += 2) {
+    const heading = cleanHeadingText(parts[i]);
+    const content = (parts[i + 1] || '').trim();
+    blocks.push({
+      heading,
+      content,
+      html: markdownToHtml(content),
+      kind: classifyBeat(heading),
+      tags: tagsFromHeading(heading),
+    });
+  }
+  return { intro, blocks };
+}
+
+function parseSessionBody(body) {
+  const { intro, blocks } = splitSubheadings(body);
+  const objectivesMatch = body.match(OBJECTIVES);
+  let objectives = objectivesMatch ? objectivesMatch[1].trim() : '';
+  if (objectives && /^[-*]/m.test(objectives)) {
+    objectives = objectives
+      .split('\n')
+      .map((line) => line.replace(/^[-*]\s+/, '').trim())
+      .filter(Boolean)
+      .join('\n');
+  }
+  const introWithoutObjectives = objectivesMatch
+    ? intro.replace(objectivesMatch[0], '').replace(/^---\s*/, '').trim()
+    : intro;
+  const tags = [...new Set(blocks.flatMap((b) => b.tags).concat(inferTagsFromText(body)))];
   return {
-    objectives: objectivesMatch ? objectivesMatch[1].trim() : '',
-    scenes,
-    combat: combatMatch ? combatMatch[1].trim() : '',
-    puzzle: puzzleMatch ? puzzleMatch[1].trim() : '',
+    objectives,
+    beats: blocks,
+    intro,
+    introHtml: markdownToHtml(introWithoutObjectives),
     tags,
   };
 }
 
-function parseNpcs(body) {
+function parseNpcsFromBlocks(blocks, body) {
+  if (blocks.length) {
+    return blocks.map((block) => {
+      const roleMatch = block.content.match(ROLE_LINE);
+      const firstPara = block.content
+        .replace(ROLE_LINE, '')
+        .replace(/^#{1,3}.*$/m, '')
+        .trim()
+        .split('\n\n')[0]
+        .replace(/\*\*/g, '')
+        .slice(0, 220);
+      return {
+        name: block.heading,
+        role: roleMatch ? roleMatch[1].trim() : '',
+        description: firstPara,
+        html: block.html,
+      };
+    });
+  }
+
   const npcs = [];
   let match;
   const re = new RegExp(NPC_LINE.source, NPC_LINE.flags);
@@ -82,6 +190,8 @@ function parseNpcs(body) {
     npcs.push({
       name: match[1].trim().replace(/:$/, ''),
       description: match[2].trim(),
+      role: '',
+      html: '',
     });
   }
   if (!npcs.length) {
@@ -95,11 +205,18 @@ function parseNpcs(body) {
           npcs.push({
             name: parts[1].trim().replace(/:$/, ''),
             description: parts[2].replace(/^[:—–-\s]+/, '').trim(),
+            role: '',
+            html: '',
           });
         }
       } else if (text.includes(':')) {
         const [name, ...rest] = text.split(':');
-        npcs.push({ name: name.replace(/^\*\*|\*\*$/g, '').trim().replace(/:$/, ''), description: rest.join(':').trim() });
+        npcs.push({
+          name: name.replace(/^\*\*|\*\*$/g, '').trim().replace(/:$/, ''),
+          description: rest.join(':').trim(),
+          role: '',
+          html: '',
+        });
       }
     }
   }
@@ -132,23 +249,28 @@ export function parseCampaign(content) {
   const sections = [];
 
   for (let i = 1; i < parts.length - 1; i += 2) {
-    const heading = parts[i].trim();
+    const heading = cleanHeadingText(parts[i]);
     const body = parts[i + 1].trim();
     const type = classifyHeading(heading);
+    if (type === 'inspired') continue;
+
+    const { intro, blocks } = splitSubheadings(body);
     const section = {
       type,
       heading,
       content: body,
       html: markdownToHtml(body),
+      introHtml: markdownToHtml(intro),
+      blocks,
       id: `sec-${sections.length}`,
     };
 
     if (type === 'session') {
-      const numMatch = heading.match(SESSION_HEADING);
-      section.number = numMatch ? parseInt(numMatch[1], 10) : sections.filter((s) => s.type === 'session').length + 1;
+      section.number =
+        sessionNumber(heading) || sections.filter((s) => s.type === 'session').length + 1;
       Object.assign(section, parseSessionBody(body));
     } else if (type === 'npcs') {
-      section.npcs = parseNpcs(body);
+      section.npcs = parseNpcsFromBlocks(blocks, body);
     }
     sections.push(section);
   }
@@ -159,7 +281,9 @@ export function parseCampaign(content) {
   return {
     title,
     preamble,
-    preambleHtml: markdownToHtml(preamble.replace(/^#\s+.+$/m, '').trim()),
+    preambleHtml: markdownToHtml(
+      preamble.replace(/^#\s+.+$/m, '').replace(WRAPPER_TITLE, '').trim(),
+    ),
     sections,
     stats: {
       wordCount: wc,
@@ -173,13 +297,19 @@ export function parseCampaign(content) {
 export function getNavGroups(parsed) {
   const groups = [];
   const sessions = parsed.sections.filter((s) => s.type === 'session');
-  const overview = parsed.sections.filter((s) => ['overview', 'hook', 'inspired'].includes(s.type));
+  const overview = parsed.sections.filter((s) => ['overview', 'hook'].includes(s.type));
   const npcs = parsed.sections.filter((s) => s.type === 'npcs');
-  const extras = parsed.sections.filter((s) => ['rewards', 'generic'].includes(s.type));
+  const table = parsed.sections.filter((s) =>
+    ['enemies', 'puzzles', 'maps', 'rewards'].includes(s.type),
+  );
+  const aftermath = parsed.sections.filter((s) =>
+    ['endings', 'checklist', 'generic'].includes(s.type),
+  );
 
   if (overview.length) groups.push({ id: 'overview', label: 'Overview', sectionIds: overview.map((s) => s.id) });
   if (sessions.length) groups.push({ id: 'sessions', label: 'Sessions', sectionIds: sessions.map((s) => s.id) });
   if (npcs.length) groups.push({ id: 'npcs', label: 'NPCs', sectionIds: npcs.map((s) => s.id) });
-  if (extras.length) groups.push({ id: 'extras', label: 'Extras', sectionIds: extras.map((s) => s.id) });
+  if (table.length) groups.push({ id: 'table', label: 'Table', sectionIds: table.map((s) => s.id) });
+  if (aftermath.length) groups.push({ id: 'extras', label: 'Extras', sectionIds: aftermath.map((s) => s.id) });
   return groups;
 }

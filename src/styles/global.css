@@ -109,62 +109,161 @@ html:not(.dark) .animate-pulse-glow {
   }
 }
 
-/* Campaign manuscript prose */
+/* Campaign manuscript prose (v-html — do not use :deep here) */
+.campaign-prose,
 .manuscript-prose {
-  color: var(--color-parchment);
-  line-height: 1.75;
+  color: var(--color-text);
+  line-height: 1.8;
+  font-size: 0.98rem;
 }
 
-.manuscript-prose :deep(h1) {
+.campaign-prose h1,
+.manuscript-prose h1 {
   font-family: var(--font-display);
   color: var(--color-gold);
   font-size: 1.75rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin: 0 0 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
 }
 
-.manuscript-prose :deep(h2) {
+.campaign-prose h2,
+.manuscript-prose h2 {
   font-family: var(--font-display);
-  color: var(--color-ember);
-  font-size: 1.35rem;
-  font-weight: 600;
-  margin-top: 1.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.manuscript-prose :deep(h3) {
-  color: var(--color-mist);
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-top: 1.25rem;
-}
-
-.manuscript-prose :deep(p) {
-  margin-bottom: 0.85rem;
-}
-
-.manuscript-prose :deep(strong) {
   color: var(--color-gold);
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 1.6rem 0 0.7rem;
 }
 
-.manuscript-prose :deep(ul),
-.manuscript-prose :deep(ol) {
-  padding-left: 1.25rem;
-  margin-bottom: 1rem;
+.campaign-prose h3,
+.manuscript-prose h3,
+.campaign-prose h4,
+.manuscript-prose h4 {
+  font-family: var(--font-display);
+  color: var(--color-gold-dim);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1.2rem 0 0.45rem;
+  line-height: 1.4;
 }
 
-.manuscript-prose :deep(li) {
+.campaign-prose p,
+.manuscript-prose p {
+  margin-bottom: 0.9rem;
+}
+
+.campaign-prose strong,
+.manuscript-prose strong {
+  color: var(--color-gold);
+  font-weight: 650;
+}
+
+.campaign-prose em,
+.manuscript-prose em {
+  color: var(--color-parchment);
+}
+
+.campaign-prose ul,
+.campaign-prose ol,
+.manuscript-prose ul,
+.manuscript-prose ol {
+  padding-left: 1.3rem;
+  margin: 0 0 1rem;
+}
+
+.campaign-prose li,
+.manuscript-prose li {
   margin-bottom: 0.35rem;
 }
 
-.manuscript-prose :deep(blockquote) {
-  border-left: 3px solid var(--color-gold-dim);
-  padding-left: 1rem;
-  margin: 1rem 0;
-  opacity: 0.85;
+.campaign-prose blockquote,
+.manuscript-prose blockquote {
+  border-left: 3px solid var(--color-gold);
+  background: color-mix(in srgb, var(--color-gold) 7%, transparent);
+  padding: 0.85rem 1.15rem;
+  margin: 1rem 0 1.2rem;
+  border-radius: 0 0.65rem 0.65rem 0;
   font-style: italic;
+  color: var(--color-text);
+}
+
+.campaign-prose hr,
+.manuscript-prose hr {
+  border: none;
+  height: 1px;
+  margin: 1.5rem 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--color-gold) 45%, transparent),
+    transparent
+  );
+}
+
+.campaign-prose table,
+.manuscript-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin: 0.75rem 0 1.15rem;
+  overflow: hidden;
+  border-radius: 0.5rem;
+}
+
+.campaign-prose th,
+.manuscript-prose th {
+  text-align: left;
+  color: var(--color-gold);
+  font-weight: 600;
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
+  background: color-mix(in srgb, var(--color-gold) 8%, transparent);
+}
+
+.campaign-prose td,
+.manuscript-prose td {
+  padding: 0.4rem 0.65rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-gold) 10%, transparent);
+  vertical-align: top;
+}
+
+.campaign-prose tr:last-child td,
+.manuscript-prose tr:last-child td {
+  border-bottom: none;
+}
+
+.campaign-section--overview .campaign-prose > p:first-of-type::first-letter {
+  font-family: var(--font-display);
+  font-size: 3.1rem;
+  float: left;
+  line-height: 0.78;
+  padding: 0.1rem 0.22rem 0 0;
+  color: var(--color-gold);
+}
+
+.section-ornament {
+  position: relative;
+}
+
+.section-ornament::after {
+  content: '';
+  display: block;
+  width: 4.5rem;
+  height: 1px;
+  margin-top: 0.55rem;
+  background: linear-gradient(to right, var(--color-gold), transparent);
+}
+
+.campaign-folio {
+  background: color-mix(in srgb, var(--color-parchment-dark) 82%, transparent);
+}
+
+.session-card,
+.campaign-section,
+.npc-roster {
+  scroll-margin-top: 6rem;
 }
 
 /* Scrollbar */

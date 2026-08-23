@@ -309,7 +309,7 @@ onMounted(async () => {
     <SiteHeader />
 
     <main class="container mx-auto px-4 pb-16 flex-1">
-      <div class="max-w-4xl mx-auto pt-8">
+      <div class="mx-auto pt-8" :class="showResult ? 'max-w-6xl' : 'max-w-4xl'">
         <div class="text-center mb-8">
           <h1 class="font-display text-2xl md:text-3xl text-gold">Campaign Forge</h1>
           <p class="text-muted text-sm mt-2">Configure, upload, and generate your adventure</p>

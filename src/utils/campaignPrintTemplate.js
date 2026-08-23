@@ -47,8 +47,12 @@ h2.session-heading {
   padding: 8px 12px;
   margin: 10px 0;
 }
-.scene { margin: 8px 0; }
-.scene-label { font-weight: bold; }
+.scene { margin: 14px 0; padding-left: 12px; border-left: 3px solid #d4c4a0; }
+.scene h3 { color: #7a5c10; font-size: 14px; margin: 0 0 6px; }
+blockquote { border-left: 3px solid #9a7b1c; padding: 8px 12px; margin: 10px 0; font-style: italic; background: #faf7f0; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #e0d8c8; }
+.npc-role { font-size: 11px; color: #6b5b95; }
 .npc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
 .npc-card { padding: 10px 12px; background: #faf7f0; border-radius: 4px; }
 .npc-name { font-weight: bold; color: #7a5c10; }
@@ -66,16 +70,18 @@ function escapeHtml(str) {
 
 function renderSession(section) {
   const tags = (section.tags || []).map((t) => `<span>${escapeHtml(t)}</span>`).join('');
-  const scenes = (section.scenes || [])
-    .map(
-      (s) =>
-        `<div class="scene">${s.label ? `<span class="scene-label">Scene ${escapeHtml(s.label)}:</span> ` : ''}${escapeHtml(s.text)}</div>`,
-    )
-    .join('');
-  const body =
-    section.objectives || section.scenes?.length
-      ? `${section.objectives ? `<div class="objectives"><strong>Objectives:</strong> ${escapeHtml(section.objectives)}</div>` : ''}${scenes}${section.combat ? `<p><strong>Combat:</strong> ${escapeHtml(section.combat)}</p>` : ''}${section.puzzle ? `<p><strong>Puzzle:</strong> ${escapeHtml(section.puzzle)}</p>` : ''}`
-      : section.html || `<p>${escapeHtml(section.content)}</p>`;
+  let body = '';
+  if (section.beats?.length) {
+    body = `${
+      section.objectives
+        ? `<div class="objectives"><strong>Objectives:</strong> ${escapeHtml(section.objectives).replace(/\n/g, '<br>')}</div>`
+        : ''
+    }${section.introHtml || ''}${section.beats
+      .map((b) => `<div class="scene"><h3>${escapeHtml(b.heading)}</h3>${b.html || ''}</div>`)
+      .join('')}`;
+  } else {
+    body = section.html || `<p>${escapeHtml(section.content)}</p>`;
+  }
 
   return `
     <div class="session-card">
@@ -89,7 +95,9 @@ function renderNpcs(section) {
   const cards = (section.npcs || [])
     .map(
       (n) =>
-        `<div class="npc-card"><div class="npc-name">${escapeHtml(n.name)}</div><div>${escapeHtml(n.description)}</div></div>`,
+        `<div class="npc-card"><div class="npc-name">${escapeHtml(n.name)}</div>${
+          n.role ? `<div class="npc-role">${escapeHtml(n.role)}</div>` : ''
+        }${n.html || `<div>${escapeHtml(n.description)}</div>`}</div>`,
     )
     .join('');
   return `

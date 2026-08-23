@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue';
+import { sessionTitle } from '../../utils/campaignParser.js';
 
 const props = defineProps({
   groups: { type: Array, default: () => [] },
@@ -31,10 +32,18 @@ function visibleSections(groupId) {
   if (!group) return [];
   return props.sections.filter((s) => group.sectionIds.includes(s.id));
 }
+
+function linkLabel(section) {
+  if (section.type === 'session') {
+    const name = sessionTitle(section.heading);
+    return name ? `${section.number}. ${name}` : `Session ${section.number}`;
+  }
+  return section.heading;
+}
 </script>
 
 <template>
-  <nav class="campaign-nav" aria-label="Campaign sections">
+  <nav class="campaign-nav lg:sticky lg:top-24" aria-label="Campaign sections">
     <div class="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
       <button
         v-for="group in groups"
@@ -48,7 +57,7 @@ function visibleSections(groupId) {
       </button>
     </div>
 
-    <ul class="hidden lg:block mt-4 space-y-1 text-sm">
+    <ul class="hidden lg:block mt-4 space-y-0.5 text-sm">
       <li v-for="section in visibleSections(activeGroup)" :key="section.id">
         <button
           type="button"
@@ -56,7 +65,7 @@ function visibleSections(groupId) {
           :class="{ 'nav-link--active': activeId === section.id }"
           @click="scrollTo(section.id)"
         >
-          {{ section.heading }}
+          {{ linkLabel(section) }}
         </button>
       </li>
     </ul>
@@ -64,6 +73,13 @@ function visibleSections(groupId) {
 </template>
 
 <style scoped>
+.campaign-nav {
+  padding: 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 14%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  backdrop-filter: blur(8px);
+}
 .nav-tab {
   padding: 0.4rem 0.85rem;
   border-radius: 9999px;
@@ -81,13 +97,15 @@ function visibleSections(groupId) {
   background: color-mix(in srgb, var(--color-gold) 8%, transparent);
 }
 .nav-link {
-  padding: 0.35rem 0.5rem;
-  border-radius: 0.375rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.4rem;
   color: var(--color-muted);
-  transition: color 0.2s;
+  transition: color 0.2s, background 0.2s;
+  line-height: 1.35;
 }
 .nav-link:hover,
 .nav-link--active {
   color: var(--color-gold);
+  background: color-mix(in srgb, var(--color-gold) 7%, transparent);
 }
 </style>

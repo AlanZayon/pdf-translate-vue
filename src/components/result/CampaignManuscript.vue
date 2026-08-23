@@ -190,9 +190,9 @@ defineExpose({ parsed, onCopy, onPrint });
         :forge-label="forgeLabel"
       />
 
-      <div class="p-4 md:p-6 lg:p-8">
+      <div class="p-4 md:p-7 lg:p-10">
         <div class="flex flex-col lg:flex-row gap-6 lg:gap-10">
-          <aside v-if="hasStructuredSections && navGroups.length" class="lg:w-52 shrink-0">
+          <aside v-if="hasStructuredSections && navGroups.length" class="lg:w-56 shrink-0">
             <CampaignNav
               :groups="navGroups"
               :sections="parsed.sections"
@@ -205,21 +205,21 @@ defineExpose({ parsed, onCopy, onPrint });
             <template v-if="hasStructuredSections">
               <template v-for="section in parsed.sections" :key="section.id">
                 <CampaignSection
-                  v-if="['overview', 'hook', 'rewards', 'generic'].includes(section.type)"
+                  v-if="['overview', 'hook', 'rewards', 'generic', 'enemies', 'puzzles', 'endings', 'maps', 'checklist'].includes(section.type)"
                   :section="section"
-                  :variant="section.type === 'overview' ? 'overview' : 'default'"
+                  :variant="section.type"
                 />
                 <SessionCard
                   v-else-if="section.type === 'session'"
                   :section="section"
-                  :default-expanded="section.number <= 1"
+                  :default-expanded="true"
                   :show-watermark="showUpsell && section.number > 1"
                 />
                 <NpcRoster v-else-if="section.type === 'npcs'" :section="section" />
               </template>
             </template>
 
-            <div v-else class="rounded-xl border border-gold/20 bg-parchment-dark p-6 md:p-8 relative">
+            <div v-else class="rounded-xl border border-gold/20 campaign-folio p-6 md:p-8 relative">
               <div
                 v-if="showUpsell"
                 class="pointer-events-none absolute inset-0 flex items-center justify-center z-10 opacity-[0.08] rotate-[-18deg]"
@@ -227,7 +227,7 @@ defineExpose({ parsed, onCopy, onPrint });
               >
                 <span class="text-4xl font-display text-gold whitespace-nowrap">Arcane Forge Preview</span>
               </div>
-              <div class="manuscript-prose" v-html="parsed.fallbackHtml" />
+              <div class="campaign-prose" v-html="parsed.fallbackHtml" />
             </div>
           </div>
         </div>

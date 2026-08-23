@@ -51,7 +51,7 @@ onMounted(load);
   <div class="min-h-screen flex flex-col text-text bg-void">
     <SiteHeader />
 
-    <main class="container mx-auto px-4 py-10 flex-1 max-w-5xl">
+    <main class="container mx-auto px-4 py-10 flex-1 max-w-6xl">
       <p v-if="loading" class="text-muted text-center">Loading your campaign...</p>
       <p v-else-if="error" class="text-danger text-center">{{ error }}</p>
       <CampaignManuscript
