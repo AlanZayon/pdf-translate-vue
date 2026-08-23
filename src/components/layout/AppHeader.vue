@@ -38,7 +38,7 @@ defineProps({
             />
             {{ apiStatus.redis_connected ? 'Queue Online' : 'Degraded' }}
           </UiBadge>
-          <UiBadge v-if="apiStatus.gemini_configured" variant="gold" class="hidden md:inline-flex">
+          <UiBadge v-if="apiStatus.llm_configured || apiStatus.gemini_configured" variant="gold" class="hidden md:inline-flex">
             AI Ready
           </UiBadge>
         </template>
