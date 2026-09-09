@@ -116,6 +116,16 @@ export async function fetchJobContent(jobId) {
   return data;
 }
 
+export async function createCampaignFromJob(jobId) {
+  const { data } = await client.post('/campaigns', { job_id: jobId });
+  return data.campaign;
+}
+
+export async function fetchCampaign(campaignId) {
+  const { data } = await client.get(`/campaigns/${campaignId}`);
+  return data.campaign;
+}
+
 export async function generateApiKey() {
   const { data } = await client.post('/dashboard/api-key');
   return data;

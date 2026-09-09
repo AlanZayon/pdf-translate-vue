@@ -18,6 +18,7 @@ const router = createRouter({
     { path: '/app', name: 'app', component: CampaignGenerator, meta: { requiresAuth: true, title: 'Forge — Arcane Forge' } },
     { path: '/app/result/:jobId', name: 'campaign-result', component: CampaignResultPage, meta: { requiresAuth: true, title: 'Your Campaign — Arcane Forge' } },
     { path: '/dashboard', name: 'dashboard', component: DashboardPage, meta: { requiresAuth: true, title: 'Dashboard — Arcane Forge' } },
+    { path: '/campaigns/:campaignId', name: 'campaign', component: () => import('../pages/CampaignPage.vue'), meta: { requiresAuth: true, title: 'Campaign — Arcane Forge' } },
     { path: '/c/:slug', name: 'share', component: SharePage, meta: { title: 'Shared Campaign — Arcane Forge', description: 'A shared RPG campaign generated with Arcane Forge.' } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

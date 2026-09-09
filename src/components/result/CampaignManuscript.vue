@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { RotateCcw, LayoutDashboard, Sparkles } from '@lucide/vue';
+import { RotateCcw, LayoutDashboard, Sparkles, Swords } from '@lucide/vue';
 import UiCard from '../shared/UiCard.vue';
 import UiButton from '../shared/UiButton.vue';
 import CampaignHero from './CampaignHero.vue';
@@ -13,7 +13,7 @@ import ExportMenu from './ExportMenu.vue';
 import CampaignReveal from './CampaignReveal.vue';
 import { parseCampaign, getNavGroups } from '../../utils/campaignParser.js';
 import { useCampaignDownload } from '../../composables/useCampaignDownload.js';
-import { createShareLink, regenerateSection, fetchJobContent } from '../../services/campaignApi.js';
+import { createShareLink, regenerateSection, fetchJobContent, createCampaignFromJob } from '../../services/campaignApi.js';
 import { trackEvent } from '../../composables/useAnalytics.js';
 
 const props = defineProps({
@@ -139,6 +139,20 @@ async function onShare() {
   }
 }
 
+async function onCreateCampaign() {
+  if (!props.jobId) return;
+  actionLoading.value = true;
+  try {
+    const campaign = await createCampaignFromJob(props.jobId);
+    emit('copy', 'Campaign created!');
+    router.push(`/campaigns/${campaign.id}`);
+  } catch (e) {
+    emit('copy', e.response?.data?.message || e.message || 'Could not create Campaign.', true);
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
 async function onExpandSessions() {
   if (!props.jobId) return;
   actionLoading.value = true;
@@ -227,6 +241,15 @@ defineExpose({ parsed, onCopy, onPrint });
           @share="onShare"
         />
 
+        <UiButton
+          v-if="jobId && !isShared"
+          variant="primary"
+          size="lg"
+          :loading="actionLoading"
+          @click="onCreateCampaign"
+        >
+          <Swords class="w-5 h-5" /> Create Campaign
+        </UiButton>
         <UiButton variant="ghost" size="lg" @click="router.push('/dashboard')">
           <LayoutDashboard class="w-5 h-5" /> Dashboard
         </UiButton>
