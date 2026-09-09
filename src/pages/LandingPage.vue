@@ -45,12 +45,9 @@ const steps = [
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <RouterLink to="/app">
             <UiButton variant="primary" size="lg">
-              Start free — 1 campaign/month
+              Open the Forge
               <ChevronRight class="w-5 h-5" />
             </UiButton>
-          </RouterLink>
-          <RouterLink to="/pricing">
-            <UiButton variant="ghost" size="lg">View pricing</UiButton>
           </RouterLink>
         </div>
       </section>
@@ -84,7 +81,7 @@ const steps = [
 
       <section class="container mx-auto px-4 py-16 border-t border-gold/10 text-center">
         <h2 class="font-display text-2xl text-gold mb-4">Ready to run your next session?</h2>
-        <p class="text-muted mb-8">Free tier includes 1 Simple campaign per month. No credit card required.</p>
+        <p class="text-muted mb-8">Personal project — generate campaigns from your rulebook PDFs.</p>
         <RouterLink to="/app">
           <UiButton variant="primary" size="lg" @click="trackEvent('signup_start')">
             Open the Forge

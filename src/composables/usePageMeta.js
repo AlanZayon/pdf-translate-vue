@@ -7,10 +7,6 @@ const ROUTE_META = {
       'Forge ready-to-play RPG campaigns from any rulebook PDF with Arcane Forge. AI-powered for D&D, Pathfinder, and more.',
     path: '/',
   },
-  pricing: {
-    description: 'Arcane Forge pricing — Free, Pro, and Studio plans plus credit packs.',
-    path: '/pricing',
-  },
   share: {
     description: 'A shared RPG campaign generated with Arcane Forge.',
     path: null,

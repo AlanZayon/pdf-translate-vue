@@ -3,9 +3,8 @@ import { ref } from 'vue';
 import { Download, FileText, Printer, Copy, Share2, ChevronDown } from '@lucide/vue';
 import UiButton from '../shared/UiButton.vue';
 
-const props = defineProps({
+defineProps({
   jobId: { type: String, default: '' },
-  isPro: { type: Boolean, default: false },
   isShared: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   title: { type: String, default: 'campaign' },
@@ -37,7 +36,7 @@ function run(action) {
       <button v-if="jobId" type="button" class="export-item" @click="run('download-md')">
         <Download class="w-4 h-4" /> Download Markdown
       </button>
-      <button v-if="jobId && isPro" type="button" class="export-item" @click="run('download-pdf')">
+      <button v-if="jobId" type="button" class="export-item" @click="run('download-pdf')">
         <FileText class="w-4 h-4" /> Export PDF
       </button>
       <button type="button" class="export-item" @click="run('print')">
@@ -46,7 +45,7 @@ function run(action) {
       <button type="button" class="export-item" @click="run('copy')">
         <Copy class="w-4 h-4" /> Copy Markdown
       </button>
-      <button v-if="jobId && isPro && !isShared" type="button" class="export-item" @click="run('share')">
+      <button v-if="jobId && !isShared" type="button" class="export-item" @click="run('share')">
         <Share2 class="w-4 h-4" /> Share Link
       </button>
     </div>

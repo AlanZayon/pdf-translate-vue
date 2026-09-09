@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import SiteHeader from '../components/layout/SiteHeader.vue';
 import AppFooter from '../components/layout/AppFooter.vue';
 import CampaignManuscript from '../components/result/CampaignManuscript.vue';
-import { fetchJobContent, fetchMe } from '../services/campaignApi.js';
+import { fetchJobContent } from '../services/campaignApi.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -12,8 +12,6 @@ const loading = ref(true);
 const error = ref('');
 const content = ref('');
 const meta = ref(null);
-const account = ref(null);
-
 const jobId = computed(() => route.params.jobId);
 
 const COMPLEXITY_LABELS = { simples: 'Simple', mediana: 'Medium', complexa: 'Complex' };
@@ -33,10 +31,9 @@ async function load() {
   loading.value = true;
   error.value = '';
   try {
-    const [data, me] = await Promise.all([fetchJobContent(jobId.value), fetchMe()]);
+    const data = await fetchJobContent(jobId.value);
     content.value = data.content;
     meta.value = data.meta;
-    account.value = me;
   } catch {
     error.value = 'Campaign not found or unavailable.';
   } finally {
@@ -62,11 +59,9 @@ onMounted(load);
         :language-name="meta?.language || 'en'"
         :processing-time="0"
         :format-time="() => '—'"
-        :user-plan="account?.plan || 'free'"
         :job-id="jobId"
         forge-label="Your Campaign"
         @new-campaign="router.push('/app')"
-        @upgrade="router.push('/pricing')"
       />
     </main>
 

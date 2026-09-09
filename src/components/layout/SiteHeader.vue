@@ -30,7 +30,6 @@ defineProps({
       </RouterLink>
 
       <nav v-if="showNav" class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-        <RouterLink to="/pricing" class="text-sm text-muted hover:text-gold transition hidden sm:inline">Pricing</RouterLink>
         <RouterLink to="/dashboard" class="text-sm text-muted hover:text-gold transition hidden md:inline">Dashboard</RouterLink>
         <RouterLink
           to="/app"

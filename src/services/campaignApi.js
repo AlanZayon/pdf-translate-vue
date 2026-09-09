@@ -28,14 +28,6 @@ client.interceptors.response.use(
   },
 );
 
-export class QuotaError extends Error {
-  constructor(payload) {
-    super(payload.message || payload.error || 'Insufficient credits');
-    this.payload = payload;
-    this.status = 402;
-  }
-}
-
 export const COMPLEXITY_MAP = {
   simple: 'simples',
   medium: 'mediana',
@@ -81,15 +73,8 @@ export async function fetchDashboardJobs() {
 export async function generateCampaign(formData, idempotencyKey) {
   const headers = { 'Content-Type': 'multipart/form-data' };
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
-  try {
-    const { data, status } = await client.post('/generate-campaign', formData, { headers });
-    return { data, status };
-  } catch (error) {
-    if (error.response?.status === 402) {
-      throw new QuotaError(error.response.data);
-    }
-    throw error;
-  }
+  const { data, status } = await client.post('/generate-campaign', formData, { headers });
+  return { data, status };
 }
 
 export async function fetchJobStatus(jobId) {
@@ -129,21 +114,6 @@ export async function exportJobMarkdown(jobId) {
 export async function fetchJobContent(jobId) {
   const { data } = await client.get(`/dashboard/jobs/${jobId}/content`);
   return data;
-}
-
-export async function startCheckout(priceKey) {
-  const { data } = await client.post('/billing/checkout', { price_key: priceKey });
-  return data.checkout_url;
-}
-
-export async function fetchCheckoutSession(sessionId) {
-  const { data } = await client.get(`/billing/session/${sessionId}`);
-  return data;
-}
-
-export async function openBillingPortal() {
-  const { data } = await client.post('/billing/portal');
-  return data.portal_url;
 }
 
 export async function generateApiKey() {

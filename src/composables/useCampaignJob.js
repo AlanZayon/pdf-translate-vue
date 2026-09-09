@@ -4,7 +4,6 @@ import {
   fetchJobStatus,
   fetchCampaignContent,
   COMPLEXITY_MAP,
-  QuotaError,
 } from '../services/campaignApi.js';
 
 const SESSION_KEY = 'rpg_campaign_job_id';
@@ -17,7 +16,6 @@ export function useCampaignJob(options = {}) {
   const isLoading = ref(false);
   const isPolling = ref(false);
   const errorMessage = ref('');
-  const creditsRefunded = ref(false);
   const campaignResult = ref(null);
   const campaignContent = ref('');
   const processingTime = ref(0);
@@ -141,7 +139,6 @@ export function useCampaignJob(options = {}) {
         stopPolling();
         isPolling.value = false;
         const err = statusData.error || 'Processing failed';
-        creditsRefunded.value = /refund/i.test(err);
         errorMessage.value = err;
         clearJobSession();
       } else if (statusData.status === 'processing') {
@@ -182,7 +179,6 @@ export function useCampaignJob(options = {}) {
     isLoading.value = true;
     isPolling.value = false;
     errorMessage.value = '';
-    creditsRefunded.value = false;
     campaignResult.value = null;
     campaignContent.value = '';
     jobId.value = null;
@@ -222,16 +218,11 @@ export function useCampaignJob(options = {}) {
         isLoading.value = false;
       }
     } catch (error) {
-      if (error instanceof QuotaError) {
-        options.onQuotaError?.(error.payload);
-        errorMessage.value = error.message;
-      } else {
-        errorMessage.value =
-          error.response?.data?.error ||
-          (error.message?.includes('Network Error')
-            ? 'Connection error. Check if the server is running.'
-            : 'Error processing request. Please try again.');
-      }
+      errorMessage.value =
+        error.response?.data?.error ||
+        (error.message?.includes('Network Error')
+          ? 'Connection error. Check if the server is running.'
+          : 'Error processing request. Please try again.');
       isLoading.value = false;
     }
   }
@@ -239,7 +230,6 @@ export function useCampaignJob(options = {}) {
   function retryPolling() {
     if (jobId.value) {
       errorMessage.value = '';
-      creditsRefunded.value = false;
       pollAttempts = 0;
       pollingStartTime = Date.now();
       startPolling(jobId.value);
@@ -253,7 +243,6 @@ export function useCampaignJob(options = {}) {
     campaignResult.value = null;
     campaignContent.value = '';
     errorMessage.value = '';
-    creditsRefunded.value = false;
     clearJobSession();
   }
 
@@ -279,7 +268,6 @@ export function useCampaignJob(options = {}) {
     isLoading,
     isPolling,
     errorMessage,
-    creditsRefunded,
     jobStatus,
     campaignResult,
     campaignContent,

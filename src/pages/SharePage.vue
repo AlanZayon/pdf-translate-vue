@@ -48,7 +48,6 @@ function onCopy(message, isError = false) {
           :language-name="meta?.language || 'en'"
           :processing-time="0"
           :format-time="() => '—'"
-          user-plan="shared"
           forge-label="Shared Adventure"
           @new-campaign="router.push('/app')"
           @copy="onCopy"

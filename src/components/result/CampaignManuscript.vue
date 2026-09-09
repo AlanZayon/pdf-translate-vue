@@ -23,12 +23,11 @@ const props = defineProps({
   languageName: { type: String, default: '' },
   processingTime: { type: Number, default: 0 },
   formatTime: { type: Function, default: (s) => `${s}s` },
-  userPlan: { type: String, default: 'free' },
   jobId: { type: String, default: '' },
   forgeLabel: { type: String, default: 'Campaign Complete' },
 });
 
-const emit = defineEmits(['new-campaign', 'copy', 'upgrade', 'content-updated']);
+const emit = defineEmits(['new-campaign', 'copy', 'content-updated']);
 
 const router = useRouter();
 const activeSectionId = ref('');
@@ -44,9 +43,7 @@ watch(
   },
 );
 
-const isPro = computed(() => ['pro', 'studio'].includes(props.userPlan));
-const isShared = computed(() => props.userPlan === 'shared');
-const showUpsell = computed(() => props.userPlan === 'free');
+const isShared = computed(() => props.forgeLabel.toLowerCase().includes('shared'));
 
 const bookSignals = computed(() => {
   const signals = props.campaignResult?.book_signals;
@@ -103,11 +100,7 @@ async function onDownloadPdf() {
     await downloadPdf(props.jobId, parsed.value.title);
     emit('copy', 'PDF downloaded!');
   } catch (e) {
-    if (e.message?.includes('402') || e.message?.includes('Pro')) {
-      emit('upgrade');
-    } else {
-      emit('copy', e.message || 'PDF export failed — try Print instead.', true);
-    }
+    emit('copy', e.message || 'PDF export failed — try Print instead.', true);
   } finally {
     actionLoading.value = false;
   }
@@ -140,15 +133,10 @@ async function onShare() {
       emit('copy', 'Share link copied!');
     }
   } catch {
-    emit('upgrade');
+    emit('copy', 'Could not create share link.', true);
   } finally {
     actionLoading.value = false;
   }
-}
-
-function onUpsellClick() {
-  trackEvent('result_upsell_click');
-  emit('upgrade');
 }
 
 async function onExpandSessions() {
@@ -213,35 +201,22 @@ defineExpose({ parsed, onCopy, onPrint });
                   v-else-if="section.type === 'session'"
                   :section="section"
                   :default-expanded="true"
-                  :show-watermark="showUpsell && section.number > 1"
+                  :show-watermark="false"
                 />
                 <NpcRoster v-else-if="section.type === 'npcs'" :section="section" />
               </template>
             </template>
 
             <div v-else class="rounded-xl border border-gold/20 campaign-folio p-6 md:p-8 relative">
-              <div
-                v-if="showUpsell"
-                class="pointer-events-none absolute inset-0 flex items-center justify-center z-10 opacity-[0.08] rotate-[-18deg]"
-                aria-hidden="true"
-              >
-                <span class="text-4xl font-display text-gold whitespace-nowrap">Arcane Forge Preview</span>
-              </div>
               <div class="campaign-prose" v-html="parsed.fallbackHtml" />
             </div>
           </div>
         </div>
       </div>
 
-      <UiCard v-if="showUpsell" class="mx-6 md:mx-8 mb-4" padding="p-4">
-        <p class="text-sm text-text mb-2">Unlock Medium & Complex campaigns, PDF export, and share links.</p>
-        <UiButton variant="primary" size="sm" @click="onUpsellClick">Upgrade to Pro</UiButton>
-      </UiCard>
-
       <div class="p-6 md:p-8 pt-0 flex flex-col sm:flex-row flex-wrap gap-3 justify-center items-center">
         <ExportMenu
           :job-id="jobId"
-          :is-pro="isPro"
           :is-shared="isShared"
           :loading="actionLoading"
           :title="parsed.title"
@@ -259,13 +234,13 @@ defineExpose({ parsed, onCopy, onPrint });
           <RotateCcw class="w-5 h-5" /> Forge Another
         </UiButton>
         <UiButton
-          v-if="jobId && isPro && !isShared"
+          v-if="jobId && !isShared"
           variant="ghost"
           size="sm"
           :loading="actionLoading"
           @click="onExpandSessions"
         >
-          <Sparkles class="w-4 h-4" /> Expand sessions (1 credit)
+          <Sparkles class="w-4 h-4" /> Expand sessions
         </UiButton>
       </div>
     </UiCard>

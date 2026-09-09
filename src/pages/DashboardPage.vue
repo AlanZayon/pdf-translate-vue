@@ -1,9 +1,8 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter, RouterLink } from 'vue-router';
 import SiteHeader from '../components/layout/SiteHeader.vue';
 import AppFooter from '../components/layout/AppFooter.vue';
-import UsageMeter from '../components/billing/UsageMeter.vue';
 import UiButton from '../components/shared/UiButton.vue';
 import UiCard from '../components/shared/UiCard.vue';
 import { useToast } from '../composables/useToast.js';
@@ -11,7 +10,6 @@ import { useCampaignDownload } from '../composables/useCampaignDownload.js';
 import {
   fetchMe,
   fetchDashboardJobs,
-  openBillingPortal,
   generateApiKey,
   createShareLink,
   fetchJobContent,
@@ -39,23 +37,6 @@ onMounted(async () => {
   }
 });
 
-const creditsUsed = computed(() => {
-  if (!me.value) return 0;
-  const total = me.value.plan_credits_monthly || 1;
-  return Math.max(0, total - (me.value.credits_balance || 0));
-});
-
-const isPro = computed(() => ['pro', 'studio'].includes(me.value?.plan));
-
-async function manageSubscription() {
-  try {
-    const url = await openBillingPortal();
-    if (url) window.location.href = url;
-  } catch {
-    router.push('/pricing');
-  }
-}
-
 function viewCampaign(job) {
   router.push(`/app/result/${job.id}`);
 }
@@ -82,7 +63,7 @@ async function share(job) {
       showToast('Share link copied!');
     }
   } catch (e) {
-    showToast(e.response?.data?.error || 'Share unavailable on your plan.', 4000);
+    showToast(e.response?.data?.error || 'Share failed.', 4000);
   } finally {
     actionLoading.value = null;
   }
@@ -105,7 +86,7 @@ async function createApiKey() {
     const data = await generateApiKey();
     apiKey.value = data.api_key;
   } catch (e) {
-    showToast(e.response?.data?.error || 'API keys require Studio plan.', 4000);
+    showToast(e.response?.data?.error || 'Could not generate API key.', 4000);
   }
 }
 
@@ -125,27 +106,13 @@ function formatDate(iso) {
       <div v-if="loading" class="text-muted">Loading...</div>
 
       <template v-else-if="me">
-        <div class="grid md:grid-cols-2 gap-6 mb-10">
-          <UsageMeter
-            :used="creditsUsed"
-            :total="me.plan_credits_monthly || 1"
-            :plan="me.plan"
-          />
-          <UiCard padding="p-4">
-            <p class="text-sm text-muted mb-1">Account</p>
-            <p class="text-text">{{ me.email || 'Signed in' }}</p>
-            <p class="text-gold capitalize mt-2">{{ me.plan }} plan · {{ me.credits_balance }} credits</p>
-            <div class="flex gap-2 mt-4">
-              <UiButton variant="ghost" size="sm" @click="router.push('/pricing')">Upgrade</UiButton>
-              <UiButton v-if="me.has_stripe" variant="ghost" size="sm" @click="manageSubscription">
-                Manage subscription
-              </UiButton>
-            </div>
-          </UiCard>
-        </div>
+        <UiCard class="mb-10" padding="p-4">
+          <p class="text-sm text-muted mb-1">Account</p>
+          <p class="text-text">{{ me.email || 'Signed in' }}</p>
+        </UiCard>
 
-        <UiCard v-if="me.plan === 'studio'" class="mb-10" padding="p-6">
-          <h2 class="font-display text-lg text-gold mb-3">Studio API</h2>
+        <UiCard class="mb-10" padding="p-6">
+          <h2 class="font-display text-lg text-gold mb-3">API access</h2>
           <p class="text-muted text-sm mb-4">Generate an API key for programmatic access.</p>
           <UiButton variant="primary" size="sm" @click="createApiKey">Generate API key</UiButton>
           <p v-if="apiKey" class="mt-4 text-xs font-mono break-all bg-surface-alt p-3 rounded-lg">{{ apiKey }}</p>
@@ -172,7 +139,6 @@ function formatDate(iso) {
                   Download
                 </UiButton>
                 <UiButton
-                  v-if="isPro"
                   variant="ghost"
                   size="sm"
                   :loading="actionLoading === `share-${job.id}`"
@@ -181,7 +147,6 @@ function formatDate(iso) {
                   Share
                 </UiButton>
                 <UiButton
-                  v-if="isPro"
                   variant="ghost"
                   size="sm"
                   :loading="actionLoading === `pdf-${job.id}`"

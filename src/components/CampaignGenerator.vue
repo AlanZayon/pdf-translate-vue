@@ -10,8 +10,6 @@ import UploadZone from './upload/UploadZone.vue';
 import ProcessingRitual from './processing/ProcessingRitual.vue';
 import CampaignManuscript from './result/CampaignManuscript.vue';
 import AppFooter from './layout/AppFooter.vue';
-import UpgradeModal from './billing/UpgradeModal.vue';
-import UsageMeter from './billing/UsageMeter.vue';
 import UiCard from './shared/UiCard.vue';
 import UiButton from './shared/UiButton.vue';
 import { useCampaignJob } from '../composables/useCampaignJob.js';
@@ -34,8 +32,6 @@ const uploadConsent = ref(false);
 const selectedPreset = ref('generic');
 const systemPresets = ref({});
 const account = ref(null);
-const upgradeOpen = ref(false);
-const upgradePayload = ref(null);
 const partyLevel = ref('');
 const tone = ref('heroic');
 const theme = ref('');
@@ -43,8 +39,6 @@ const detectedPreset = ref(null);
 const useCharacterSheets = ref(false);
 const partySize = ref(3);
 const sheetFiles = ref([]);
-
-const CREDIT_COST = { simple: 1, medium: 2, complex: 4 };
 
 const {
   complexities,
@@ -71,7 +65,6 @@ const {
   isLoading,
   isPolling,
   errorMessage,
-  creditsRefunded,
   jobStatus,
   campaignResult,
   campaignContent,
@@ -85,13 +78,7 @@ const {
   resumeFromSession,
   formatTime,
   getLastCompletedJob,
-} = useCampaignJob({
-  onQuotaError: (payload) => {
-    upgradePayload.value = payload;
-    upgradeOpen.value = true;
-    trackEvent('upgrade_modal_shown', { reason: payload.error });
-  },
-});
+} = useCampaignJob();
 
 const { toastMessage, toastVisible, showToast } = useToast();
 
@@ -107,12 +94,6 @@ const showResult = computed(
 
 const lastCompletedJob = ref(null);
 
-const creditsUsed = computed(() => {
-  if (!account.value) return 0;
-  const total = account.value.plan_credits_monthly || 1;
-  return Math.max(0, total - (account.value.credits_balance || 0));
-});
-
 watch([campaignResult, campaignContent], ([result, content]) => {
   if (result && content) {
     currentStep.value = resultStep.value;
@@ -124,10 +105,6 @@ watch([campaignResult, campaignContent], ([result, content]) => {
 watch(isPolling, (polling) => {
   if (polling) maxReached.value = Math.max(maxReached.value, 2);
 });
-
-const creditCost = computed(() => CREDIT_COST[selectedComplexity.value] || 2);
-const creditsRemaining = computed(() => account.value?.credits_balance ?? 0);
-const isPriority = computed(() => ['pro', 'studio'].includes(account.value?.plan));
 
 const maxWizardStep = computed(() => (useCharacterSheets.value ? 3 : 2));
 const resultStep = computed(() => (useCharacterSheets.value ? 4 : 3));
@@ -148,21 +125,6 @@ watch(useCharacterSheets, (on) => {
     sheetFiles.value = [];
   }
 });
-
-function onLockedCharacterSheets() {
-  upgradePayload.value = {
-    error: 'plan_restriction',
-    message: 'Character sheets require Pro or Studio.',
-  };
-  upgradeOpen.value = true;
-  trackEvent('soft_paywall_shown', { feature: 'character_sheets' });
-}
-
-function onLockedComplexity() {
-  upgradePayload.value = { error: 'plan_restriction', message: 'Medium and Complex campaigns require Pro.' };
-  upgradeOpen.value = true;
-  trackEvent('soft_paywall_shown', { feature: 'complexity' });
-}
 
 watch(selectedFile, async (file) => {
   if (!file) return;
@@ -280,11 +242,6 @@ function onCopy(message, isError = false) {
   showToast(message, isError ? 4000 : 3000);
 }
 
-function onUpgrade() {
-  upgradeOpen.value = false;
-  router.push('/pricing');
-}
-
 function continueViewingLast() {
   if (lastCompletedJob.value) {
     router.push(`/app/result/${lastCompletedJob.value}`);
@@ -314,16 +271,6 @@ onMounted(async () => {
           <h1 class="font-display text-2xl md:text-3xl text-gold">Campaign Forge</h1>
           <p class="text-muted text-sm mt-2">Configure, upload, and generate your adventure</p>
         </div>
-
-        <UsageMeter
-          v-if="account"
-          class="mb-8"
-          :used="creditsUsed"
-          :total="account.plan_credits_monthly || 1"
-          :plan="account.plan"
-          :remaining="creditsRemaining"
-          @upgrade="router.push('/pricing')"
-        />
 
         <StepIndicator
           v-if="showWizard || isPolling || showResult"
@@ -355,7 +302,6 @@ onMounted(async () => {
           :format-time="formatTime"
           :job-status="jobStatus"
           :complexity-id="selectedComplexity"
-          :is-priority="isPriority"
           />
         </Transition>
 
@@ -367,8 +313,6 @@ onMounted(async () => {
               <ComplexitySelector
                 v-model="selectedComplexity"
                 :complexities="complexities"
-                :user-plan="account?.plan || 'free'"
-                @locked-click="onLockedComplexity"
               />
               <SystemPresetSelector v-model="selectedPreset" :presets="systemPresets" />
               <p v-if="detectedPreset" class="text-sm text-gold">
@@ -378,8 +322,6 @@ onMounted(async () => {
               <CharacterSheetsToggle
                 v-model="useCharacterSheets"
                 v-model:party-size="partySize"
-                :user-plan="account?.plan || 'free'"
-                @locked-click="onLockedCharacterSheets"
               />
             </div>
             <div class="flex justify-end mt-8">
@@ -416,11 +358,6 @@ onMounted(async () => {
               class="hidden"
               @change="handleFileChange"
             />
-
-            <p class="text-sm text-muted mb-4 text-center">
-              This will use <strong class="text-gold">{{ creditCost }} credit{{ creditCost > 1 ? 's' : '' }}</strong>
-              · {{ creditsRemaining }} remaining
-            </p>
 
             <div class="flex flex-col sm:flex-row gap-3 mt-4">
               <UiButton variant="ghost" @click="prevStep">
@@ -479,11 +416,6 @@ onMounted(async () => {
               @update:sheets="sheetFiles = $event"
             />
 
-            <p class="text-sm text-muted mb-4 text-center mt-6">
-              This will use <strong class="text-gold">{{ creditCost }} credit{{ creditCost > 1 ? 's' : '' }}</strong>
-              · {{ creditsRemaining }} remaining
-            </p>
-
             <div class="flex flex-col sm:flex-row gap-3 mt-4">
               <UiButton variant="ghost" @click="prevStep">
                 <ChevronLeft class="w-5 h-5" aria-hidden="true" />
@@ -516,18 +448,15 @@ onMounted(async () => {
             :language-name="getLanguageName(selectedLanguage)"
             :processing-time="processingTime"
             :format-time="formatTime"
-            :user-plan="account?.plan || 'free'"
             :job-id="jobId"
             @new-campaign="onNewCampaign"
             @copy="onCopy"
-            @upgrade="onUpgrade"
           />
         </Transition>
 
         <UiCard v-if="errorMessage" class="mt-8 border-danger/40" padding="p-6" role="alert">
           <h3 class="font-display text-lg text-danger mb-2">The Ritual Failed</h3>
           <p class="text-muted">{{ errorMessage }}</p>
-          <p v-if="creditsRefunded" class="text-sm text-gold mt-2">Credits refunded automatically.</p>
           <div class="mt-4 flex gap-3">
             <UiButton v-if="jobId" variant="danger" size="sm" @click="retryPolling">
               Try Again
@@ -539,14 +468,6 @@ onMounted(async () => {
     </main>
 
     <AppFooter />
-
-    <UpgradeModal
-      :open="upgradeOpen"
-      :payload="upgradePayload"
-      @close="upgradeOpen = false"
-      @upgrade="onUpgrade"
-      @checkout="onUpgrade"
-    />
 
     <Transition name="fade-slide">
       <div

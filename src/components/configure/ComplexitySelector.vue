@@ -1,32 +1,21 @@
 <script setup>
-import { Swords, Map, Castle, Lock } from '@lucide/vue';
+import { Swords, Map, Castle } from '@lucide/vue';
 
-const props = defineProps({
+defineProps({
   complexities: { type: Array, required: true },
   modelValue: { type: String, required: true },
-  userPlan: { type: String, default: 'free' },
-  creditCosts: { type: Object, default: () => ({ simple: 1, medium: 2, complex: 4 }) },
 });
 
-const emit = defineEmits(['update:modelValue', 'locked-click']);
+const emit = defineEmits(['update:modelValue']);
 
 const iconMap = { simple: Swords, medium: Map, complex: Castle };
-const creditMap = { simple: 1, medium: 2, complex: 4 };
 const etaMap = { simple: '~3 min', medium: '~5 min', complex: '~10 min' };
 
 function getIcon(id) {
   return iconMap[id] || Map;
 }
 
-function isLocked(c) {
-  return props.userPlan === 'free' && c.id !== 'simple';
-}
-
 function onSelect(c) {
-  if (isLocked(c)) {
-    emit('locked-click', c);
-    return;
-  }
   emit('update:modelValue', c.id);
 }
 </script>
@@ -43,24 +32,14 @@ function onSelect(c) {
         type="button"
         role="radio"
         :aria-checked="modelValue === c.id"
-        :disabled="isLocked(c)"
         :class="[
-          'text-left p-5 rounded-2xl border-2 transition-all duration-200 relative',
-          isLocked(c) ? 'opacity-55 cursor-not-allowed border-muted/15' : '',
-          modelValue === c.id && !isLocked(c)
+          'text-left p-5 rounded-2xl border-2 transition-all duration-200 relative bg-surface-alt',
+          modelValue === c.id
             ? 'border-gold bg-gold/10 shadow-gold ring-2 ring-gold/30'
-            : !isLocked(c)
-              ? 'border-muted/20 bg-surface-alt hover:border-gold/40 hover:shadow-gold'
-              : 'bg-surface-alt',
+            : 'border-muted/20 hover:border-gold/40 hover:shadow-gold',
         ]"
         @click="onSelect(c)"
       >
-        <span
-          v-if="isLocked(c)"
-          class="absolute top-3 right-3 text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full flex items-center gap-1"
-        >
-          <Lock class="w-3 h-3" /> Pro
-        </span>
         <component
           :is="getIcon(c.id)"
           class="w-8 h-8 mb-3"
@@ -71,7 +50,7 @@ function onSelect(c) {
           {{ c.name }}
         </h3>
         <p class="text-gold/80 text-xs font-semibold mb-1">
-          {{ creditMap[c.id] || 2 }} credit{{ (creditMap[c.id] || 2) > 1 ? 's' : '' }} · {{ etaMap[c.id] || '~5 min' }}
+          {{ etaMap[c.id] || '~5 min' }}
         </p>
         <p class="text-gold/70 text-xs font-medium mb-2">{{ c.sessions }}</p>
         <p class="text-muted text-sm leading-snug">{{ c.description }}</p>

@@ -11,7 +11,6 @@ import { RouterLink } from 'vue-router';
           <RouterLink to="/terms" class="hover:text-gold transition">Terms</RouterLink>
           <RouterLink to="/privacy" class="hover:text-gold transition">Privacy</RouterLink>
           <RouterLink to="/upload-consent" class="hover:text-gold transition">Upload Consent</RouterLink>
-          <RouterLink to="/pricing" class="hover:text-gold transition">Pricing</RouterLink>
           <a href="mailto:hello@arcaneforge.app" class="hover:text-gold transition">Support</a>
         </nav>
       </div>
