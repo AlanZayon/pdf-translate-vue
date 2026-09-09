@@ -14,6 +14,7 @@ import {
   startGameSession,
   endGameSession,
   submitSessionAction,
+  submitSessionVoiceAction,
 } from '../services/campaignApi.js';
 
 const route = useRoute();
@@ -30,6 +31,13 @@ const lastNarration = ref('');
 const campaignState = ref(null);
 const liveEvents = ref([]);
 const presence = ref([]);
+const recording = ref(false);
+const voiceHint = ref('');
+
+let mediaRecorder = null;
+let mediaChunks = [];
+let mediaStream = null;
+let currentAudio = null;
 
 const sessionId = computed(() => route.params.sessionId);
 const isHost = computed(() => me.value && session.value && me.value.id === session.value.host_user_id);
@@ -94,6 +102,9 @@ function onLiveEvent(msg) {
   }
   if (msg.type === 'gm_narration' && msg.payload?.text) {
     lastNarration.value = msg.payload.text;
+  }
+  if (msg.type === 'gm_audio' && msg.payload?.data_base64) {
+    playGmAudio(msg.payload);
   }
   if (msg.type === 'dice_result' || msg.type === 'check_result') {
     campaignState.value = {
@@ -177,12 +188,100 @@ async function sendAction() {
     const data = await submitSessionAction(sessionId.value, text);
     lastNarration.value = data.narration || '';
     campaignState.value = data.state || null;
+    if (data.audio?.data_base64) playResponseAudioIfNeeded(data.audio);
     actionText.value = '';
     await refresh();
   } catch (e) {
     actionError.value = e.response?.data?.message || e.response?.data?.error || 'Action failed.';
   } finally {
     busy.value = false;
+  }
+}
+
+function playGmAudio(audioPayload) {
+  if (!audioPayload?.data_base64) return;
+  try {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+    const mime = audioPayload.content_type || 'audio/mpeg';
+    const src = `data:${mime};base64,${audioPayload.data_base64}`;
+    currentAudio = new Audio(src);
+    currentAudio.play().catch(() => {});
+  } catch {
+    /* ignore decode/play failures — text narration remains */
+  }
+}
+
+/** Prefer live gm_audio; only play HTTP audio when the socket is down. */
+function playResponseAudioIfNeeded(audio) {
+  if (!audio?.data_base64) return;
+  if (wsConnected.value) return;
+  playGmAudio(audio);
+}
+
+async function startHoldToSpeak() {
+  if (busy.value || recording.value || session.value?.status !== 'ACTIVE') return;
+  actionError.value = '';
+  voiceHint.value = '';
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaChunks = [];
+    const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+    mediaRecorder = mime ? new MediaRecorder(mediaStream, { mimeType: mime }) : new MediaRecorder(mediaStream);
+    mediaRecorder.ondataavailable = (ev) => {
+      if (ev.data?.size) mediaChunks.push(ev.data);
+    };
+    mediaRecorder.onstop = async () => {
+      const type = mediaRecorder?.mimeType || 'audio/webm';
+      const blob = new Blob(mediaChunks, { type });
+      stopMicTracks();
+      mediaRecorder = null;
+      if (!blob.size) {
+        voiceHint.value = 'No audio captured.';
+        return;
+      }
+      busy.value = true;
+      try {
+        const data = await submitSessionVoiceAction(sessionId.value, blob, type);
+        lastNarration.value = data.narration || '';
+        campaignState.value = data.state || null;
+        if (data.transcript) voiceHint.value = `Heard: ${data.transcript}`;
+        if (data.audio?.data_base64) playResponseAudioIfNeeded(data.audio);
+        await refresh();
+      } catch (e) {
+        actionError.value =
+          e.response?.data?.message || e.response?.data?.error || 'Voice action failed.';
+      } finally {
+        busy.value = false;
+      }
+    };
+    mediaRecorder.start();
+    recording.value = true;
+    voiceHint.value = 'Listening… release to send';
+  } catch {
+    actionError.value = 'Microphone permission denied or unavailable.';
+    stopMicTracks();
+  }
+}
+
+function stopHoldToSpeak() {
+  if (!recording.value || !mediaRecorder) return;
+  recording.value = false;
+  voiceHint.value = 'Transcribing…';
+  try {
+    mediaRecorder.stop();
+  } catch {
+    stopMicTracks();
+    busy.value = false;
+  }
+}
+
+function stopMicTracks() {
+  if (mediaStream) {
+    mediaStream.getTracks().forEach((t) => t.stop());
+    mediaStream = null;
   }
 }
 
@@ -193,7 +292,15 @@ function copyInvite() {
 }
 
 onMounted(load);
-onUnmounted(disconnectWs);
+onUnmounted(() => {
+  disconnectWs();
+  stopMicTracks();
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+});
+
 </script>
 
 <template>
@@ -305,7 +412,7 @@ onUnmounted(disconnectWs);
         </div>
 
         <p v-if="session.status === 'ACTIVE'" class="text-sm text-gold mb-4">
-          Session is active. Text actions use HTTP (works if live sync drops).
+          Session is active. Text stays primary; hold the mic to speak an action.
         </p>
         <UiCard v-if="session.status === 'ACTIVE'" class="mb-6" padding="p-6">
           <h2 class="font-display text-lg text-gold mb-3">Your action</h2>
@@ -315,9 +422,22 @@ onUnmounted(disconnectWs);
             class="w-full bg-void border border-muted/30 rounded px-3 py-2 text-text mb-3"
             placeholder="What do you do?"
           />
-          <UiButton variant="primary" :disabled="busy || !actionText.trim()" @click="sendAction">
-            Submit action
-          </UiButton>
+          <div class="flex flex-wrap gap-3 items-center">
+            <UiButton variant="primary" :disabled="busy || !actionText.trim()" @click="sendAction">
+              Submit action
+            </UiButton>
+            <UiButton
+              variant="ghost"
+              :disabled="busy"
+              @pointerdown.prevent="startHoldToSpeak"
+              @pointerup.prevent="stopHoldToSpeak"
+              @pointerleave.prevent="stopHoldToSpeak"
+              @pointercancel.prevent="stopHoldToSpeak"
+            >
+              {{ recording ? 'Release to send…' : 'Hold to speak' }}
+            </UiButton>
+          </div>
+          <p v-if="voiceHint" class="mt-2 text-sm text-muted">{{ voiceHint }}</p>
           <p v-if="lastNarration" class="mt-4 text-text leading-relaxed">{{ lastNarration }}</p>
           <p v-if="campaignState?.last_dice" class="mt-2 text-sm text-muted">
             Last dice: {{ campaignState.last_dice.total }}

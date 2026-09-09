@@ -163,8 +163,20 @@ export async function endGameSession(sessionId) {
   return data.session;
 }
 
-export async function submitSessionAction(sessionId, text) {
-  const { data } = await client.post(`/sessions/${sessionId}/actions`, { text });
+export async function submitSessionAction(sessionId, text, { speak = true } = {}) {
+  const { data } = await client.post(`/sessions/${sessionId}/actions`, { text, speak });
+  return data;
+}
+
+export async function submitSessionVoiceAction(sessionId, blob, contentType = 'audio/webm') {
+  const form = new FormData();
+  const type = contentType || blob.type || 'audio/webm';
+  form.append('audio', blob, 'action.webm');
+  form.append('content_type', type);
+  const { data } = await client.post(`/sessions/${sessionId}/actions/voice`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 180000,
+  });
   return data;
 }
 
