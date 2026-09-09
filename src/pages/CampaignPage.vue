@@ -5,13 +5,15 @@ import SiteHeader from '../components/layout/SiteHeader.vue';
 import AppFooter from '../components/layout/AppFooter.vue';
 import UiButton from '../components/shared/UiButton.vue';
 import UiCard from '../components/shared/UiCard.vue';
-import { fetchCampaign } from '../services/campaignApi.js';
+import { fetchCampaign, createGameSession } from '../services/campaignApi.js';
 
 const route = useRoute();
 const router = useRouter();
 const loading = ref(true);
 const error = ref('');
 const campaign = ref(null);
+const starting = ref(false);
+const startError = ref('');
 
 const campaignId = computed(() => route.params.campaignId);
 const characters = computed(() => campaign.value?.characters || []);
@@ -26,6 +28,20 @@ async function load() {
     error.value = 'Campaign not found or unavailable.';
   } finally {
     loading.value = false;
+  }
+}
+
+async function startLobby() {
+  starting.value = true;
+  startError.value = '';
+  try {
+    const session = await createGameSession(campaignId.value);
+    router.push(`/sessions/${session.id}`);
+  } catch (e) {
+    startError.value =
+      e.response?.data?.message || e.response?.data?.error || 'Could not create GameSession.';
+  } finally {
+    starting.value = false;
   }
 }
 
@@ -74,15 +90,17 @@ onMounted(load);
           <p v-if="blueprint.premise" class="text-sm text-text leading-relaxed">{{ blueprint.premise }}</p>
         </UiCard>
 
-        <p class="text-sm text-muted mb-6">
-          Lobby / GameSession comes next — this page only confirms the Campaign was created from your Job.
-        </p>
+        <p v-if="startError" class="text-danger text-sm mb-4">{{ startError }}</p>
 
         <div class="flex flex-wrap gap-3">
+          <UiButton variant="primary" :disabled="starting" @click="startLobby">
+            {{ starting ? 'Opening lobby…' : 'Start GameSession' }}
+          </UiButton>
+          <UiButton variant="ghost" @click="router.push('/join')">Join with invite</UiButton>
           <UiButton variant="ghost" @click="router.push(`/app/result/${campaign.job_id}`)">
             Back to manuscript
           </UiButton>
-          <UiButton variant="primary" @click="router.push('/dashboard')">Dashboard</UiButton>
+          <UiButton variant="ghost" @click="router.push('/dashboard')">Dashboard</UiButton>
         </div>
       </template>
     </main>

@@ -126,6 +126,43 @@ export async function fetchCampaign(campaignId) {
   return data.campaign;
 }
 
+export async function createGameSession(campaignId) {
+  const { data } = await client.post('/sessions', { campaign_id: campaignId });
+  return data.session;
+}
+
+export async function joinGameSession(inviteCode) {
+  const { data } = await client.post('/sessions/join', { invite_code: inviteCode });
+  return data.session;
+}
+
+export async function fetchGameSession(sessionId) {
+  const { data } = await client.get(`/sessions/${sessionId}`);
+  return data.session;
+}
+
+export async function claimSessionCharacter(sessionId, characterId) {
+  const { data } = await client.post(`/sessions/${sessionId}/claim`, {
+    character_id: characterId,
+  });
+  return data.session;
+}
+
+export async function setSessionReady(sessionId, ready = true) {
+  const { data } = await client.post(`/sessions/${sessionId}/ready`, { ready });
+  return data.session;
+}
+
+export async function startGameSession(sessionId) {
+  const { data } = await client.post(`/sessions/${sessionId}/start`);
+  return data.session;
+}
+
+export async function endGameSession(sessionId) {
+  const { data } = await client.post(`/sessions/${sessionId}/end`);
+  return data.session;
+}
+
 export async function generateApiKey() {
   const { data } = await client.post('/dashboard/api-key');
   return data;
