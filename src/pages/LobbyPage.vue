@@ -12,6 +12,7 @@ import {
   setSessionReady,
   startGameSession,
   endGameSession,
+  submitSessionAction,
 } from '../services/campaignApi.js';
 
 const route = useRoute();
@@ -23,6 +24,9 @@ const loading = ref(true);
 const error = ref('');
 const actionError = ref('');
 const busy = ref(false);
+const actionText = ref('');
+const lastNarration = ref('');
+const campaignState = ref(null);
 let pollTimer = null;
 
 const sessionId = computed(() => route.params.sessionId);
@@ -95,6 +99,24 @@ function start() {
 
 async function end() {
   await run(() => endGameSession(sessionId.value));
+}
+
+async function sendAction() {
+  const text = actionText.value.trim();
+  if (!text) return;
+  busy.value = true;
+  actionError.value = '';
+  try {
+    const data = await submitSessionAction(sessionId.value, text);
+    lastNarration.value = data.narration || '';
+    campaignState.value = data.state || null;
+    actionText.value = '';
+    await refresh();
+  } catch (e) {
+    actionError.value = e.response?.data?.message || e.response?.data?.error || 'Action failed.';
+  } finally {
+    busy.value = false;
+  }
 }
 
 function copyInvite() {
@@ -221,9 +243,25 @@ onUnmounted(() => {
           </UiButton>
         </div>
 
-        <p v-if="session.status === 'ACTIVE'" class="text-sm text-gold">
-          Session is active. Live AI GM play comes in the next tickets.
+        <p v-if="session.status === 'ACTIVE'" class="text-sm text-gold mb-4">
+          Session is active. Submit a text action below.
         </p>
+        <UiCard v-if="session.status === 'ACTIVE'" class="mb-6" padding="p-6">
+          <h2 class="font-display text-lg text-gold mb-3">Your action</h2>
+          <textarea
+            v-model="actionText"
+            rows="3"
+            class="w-full bg-void border border-muted/30 rounded px-3 py-2 text-text mb-3"
+            placeholder="What do you do?"
+          />
+          <UiButton variant="primary" :disabled="busy || !actionText.trim()" @click="sendAction">
+            Submit action
+          </UiButton>
+          <p v-if="lastNarration" class="mt-4 text-text leading-relaxed">{{ lastNarration }}</p>
+          <p v-if="campaignState?.last_dice" class="mt-2 text-sm text-muted">
+            Last dice: {{ campaignState.last_dice.total }}
+          </p>
+        </UiCard>
         <p v-else-if="session.status === 'ENDED'" class="text-sm text-muted">
           This GameSession has ended. Create a new one from the Campaign page.
         </p>

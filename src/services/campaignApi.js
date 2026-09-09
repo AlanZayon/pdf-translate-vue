@@ -163,6 +163,11 @@ export async function endGameSession(sessionId) {
   return data.session;
 }
 
+export async function submitSessionAction(sessionId, text) {
+  const { data } = await client.post(`/sessions/${sessionId}/actions`, { text });
+  return data;
+}
+
 export async function generateApiKey() {
   const { data } = await client.post('/dashboard/api-key');
   return data;
