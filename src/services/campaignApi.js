@@ -168,6 +168,13 @@ export async function submitSessionAction(sessionId, text) {
   return data;
 }
 
+export async function fetchSessionSnapshot(sessionId, afterSeq = 0) {
+  const { data } = await client.get(`/sessions/${sessionId}/snapshot`, {
+    params: { after_seq: afterSeq },
+  });
+  return data.snapshot;
+}
+
 export async function generateApiKey() {
   const { data } = await client.post('/dashboard/api-key');
   return data;

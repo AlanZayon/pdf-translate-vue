@@ -5,6 +5,7 @@ import SiteHeader from '../components/layout/SiteHeader.vue';
 import AppFooter from '../components/layout/AppFooter.vue';
 import UiButton from '../components/shared/UiButton.vue';
 import UiCard from '../components/shared/UiCard.vue';
+import { useGameSessionSocket } from '../composables/useGameSessionSocket.js';
 import {
   fetchMe,
   fetchGameSession,
@@ -27,7 +28,8 @@ const busy = ref(false);
 const actionText = ref('');
 const lastNarration = ref('');
 const campaignState = ref(null);
-let pollTimer = null;
+const liveEvents = ref([]);
+const presence = ref([]);
 
 const sessionId = computed(() => route.params.sessionId);
 const isHost = computed(() => me.value && session.value && me.value.id === session.value.host_user_id);
@@ -55,9 +57,73 @@ function characterName(characterId) {
   return c?.display_name || '—';
 }
 
+function presenceLabel(userId) {
+  const row = presence.value.find((p) => p.user_id === userId);
+  if (!row) return '';
+  return row.connected ? 'online' : 'offline';
+}
+
 async function refresh() {
   session.value = await fetchGameSession(sessionId.value);
 }
+
+function applySnapshot(snap) {
+  if (snap.session) session.value = snap.session;
+  if (snap.state) campaignState.value = snap.state;
+  if (snap.presence) presence.value = snap.presence;
+  for (const ev of snap.events || []) {
+    if (ev.type === 'gm_narration' && ev.payload?.text) {
+      lastNarration.value = ev.payload.text;
+    }
+    liveEvents.value.push(ev);
+  }
+  if (liveEvents.value.length > 40) {
+    liveEvents.value = liveEvents.value.slice(-40);
+  }
+}
+
+function onLiveEvent(msg) {
+  if (msg.type === 'error') {
+    actionError.value = msg.payload?.message || msg.payload?.code || 'Live sync error';
+    return;
+  }
+  if (msg.type === 'pong') return;
+  liveEvents.value.push(msg);
+  if (liveEvents.value.length > 40) {
+    liveEvents.value = liveEvents.value.slice(-40);
+  }
+  if (msg.type === 'gm_narration' && msg.payload?.text) {
+    lastNarration.value = msg.payload.text;
+  }
+  if (msg.type === 'dice_result' || msg.type === 'check_result') {
+    campaignState.value = {
+      ...(campaignState.value || {}),
+      last_dice: msg.payload,
+    };
+  }
+  if (msg.type === 'presence_up' || msg.type === 'presence_down') {
+    const uid = msg.payload?.user_id;
+    if (uid) {
+      const idx = presence.value.findIndex((p) => p.user_id === uid);
+      const connected = msg.type === 'presence_up';
+      if (idx >= 0) presence.value[idx] = { ...presence.value[idx], connected };
+      else presence.value.push({ user_id: uid, connected });
+    }
+  }
+  if (
+    msg.type === 'character_claimed' ||
+    msg.type === 'player_ready' ||
+    msg.type === 'session_started' ||
+    msg.type === 'session_ended'
+  ) {
+    refresh().catch(() => {});
+  }
+}
+
+const { connected: wsConnected, connect: connectWs, disconnect: disconnectWs } = useGameSessionSocket(
+  sessionId,
+  { onSnapshot: applySnapshot, onEvent: onLiveEvent },
+);
 
 async function load() {
   loading.value = true;
@@ -65,6 +131,7 @@ async function load() {
   try {
     me.value = await fetchMe();
     await refresh();
+    connectWs();
   } catch {
     error.value = 'GameSession not found or you are not a member.';
   } finally {
@@ -125,16 +192,8 @@ function copyInvite() {
   navigator.clipboard.writeText(code).catch(() => {});
 }
 
-onMounted(async () => {
-  await load();
-  pollTimer = setInterval(() => {
-    if (!error.value) refresh().catch(() => {});
-  }, 4000);
-});
-
-onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer);
-});
+onMounted(load);
+onUnmounted(disconnectWs);
 </script>
 
 <template>
@@ -150,6 +209,7 @@ onUnmounted(() => {
         <p class="text-muted text-sm mb-6">
           Status: {{ session.status }}
           · {{ session.players.length }} / 4 players
+          · live {{ wsConnected ? 'connected' : 'reconnecting…' }}
         </p>
 
         <UiCard class="mb-6" padding="p-6">
@@ -179,6 +239,7 @@ onUnmounted(() => {
               <span class="text-sm text-muted">
                 {{ p.character_id ? characterName(p.character_id) : 'no character' }}
                 · {{ p.ready ? 'ready' : 'not ready' }}
+                <span v-if="presenceLabel(p.user_id)"> · {{ presenceLabel(p.user_id) }}</span>
               </span>
             </li>
           </ul>
@@ -244,7 +305,7 @@ onUnmounted(() => {
         </div>
 
         <p v-if="session.status === 'ACTIVE'" class="text-sm text-gold mb-4">
-          Session is active. Submit a text action below.
+          Session is active. Text actions use HTTP (works if live sync drops).
         </p>
         <UiCard v-if="session.status === 'ACTIVE'" class="mb-6" padding="p-6">
           <h2 class="font-display text-lg text-gold mb-3">Your action</h2>
@@ -262,10 +323,20 @@ onUnmounted(() => {
             Last dice: {{ campaignState.last_dice.total }}
           </p>
         </UiCard>
-        <p v-else-if="session.status === 'ENDED'" class="text-sm text-muted">
+
+        <UiCard v-if="liveEvents.length" class="mb-6" padding="p-6">
+          <h2 class="font-display text-lg text-gold mb-3">Live events</h2>
+          <ul class="space-y-1 text-sm text-muted max-h-48 overflow-y-auto">
+            <li v-for="(ev, i) in liveEvents.slice().reverse()" :key="ev.event_id || i">
+              #{{ ev.seq || '—' }} {{ ev.type }}
+            </li>
+          </ul>
+        </UiCard>
+
+        <p v-if="session.status === 'ENDED'" class="text-sm text-muted">
           This GameSession has ended. Create a new one from the Campaign page.
         </p>
-        <p v-else-if="isHost && !canStart" class="text-sm text-muted">
+        <p v-else-if="isHost && session.status === 'LOBBY' && !canStart" class="text-sm text-muted">
           Start needs 2–4 players, each with a claimed character and ready.
         </p>
       </template>
