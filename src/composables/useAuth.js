@@ -54,7 +54,11 @@ export async function ensureAuthReady() {
 export async function getAuthHeaders() {
   await ensureAuthReady();
   if (isDevAuth) {
-    return { Authorization: 'Bearer dev-token' };
+    // Homolog: second browser can `localStorage.setItem('devAuthToken','player-2')`
+    const token =
+      (typeof localStorage !== 'undefined' && localStorage.getItem('devAuthToken')) ||
+      'dev-token';
+    return { Authorization: `Bearer ${token}` };
   }
   try {
     const { getToken } = await import('@clerk/vue');

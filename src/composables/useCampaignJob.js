@@ -9,7 +9,8 @@ import {
 const SESSION_KEY = 'rpg_campaign_job_id';
 const LAST_COMPLETED_KEY = 'rpg_last_completed_job';
 const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_ATTEMPTS = 450;
+// Full rulebook + slow LLM can exceed 15m; keep polling for ~2h.
+const MAX_POLL_ATTEMPTS = 3600;
 
 export function useCampaignJob(options = {}) {
   const jobId = ref(null);
@@ -111,14 +112,6 @@ export function useCampaignJob(options = {}) {
     pollingElapsedTime.value = Math.floor((Date.now() - pollingStartTime) / 1000);
     pollAttempts += 1;
 
-    if (pollAttempts >= MAX_POLL_ATTEMPTS) {
-      stopPolling();
-      isPolling.value = false;
-      errorMessage.value = 'Processing timeout exceeded. Please try again.';
-      clearJobSession();
-      return;
-    }
-
     try {
       const statusData = await fetchJobStatus(jobId.value);
       jobStatus.value = statusData.status || '';
@@ -135,16 +128,42 @@ export function useCampaignJob(options = {}) {
 
       if (statusData.status === 'completed') {
         await handleCompleted(statusData);
-      } else if (statusData.status === 'failed') {
+        return;
+      }
+      if (statusData.status === 'failed') {
         stopPolling();
         isPolling.value = false;
         const err = statusData.error || 'Processing failed';
         errorMessage.value = err;
         clearJobSession();
-      } else if (statusData.status === 'processing') {
+        return;
+      }
+
+      if (statusData.status === 'processing') {
         pollingMessage.value = statusData.progress || 'Processing...';
       } else if (statusData.status === 'queued') {
         pollingMessage.value = statusData.progress || 'Queued for processing...';
+      }
+
+      // Still working on the server — keep waiting instead of a hard client timeout.
+      if (
+        pollAttempts >= MAX_POLL_ATTEMPTS &&
+        (statusData.status === 'processing' || statusData.status === 'queued')
+      ) {
+        pollAttempts = Math.floor(MAX_POLL_ATTEMPTS / 2);
+        pollingMessage.value =
+          statusData.progress ||
+          'Still generating (this can take a while with a full rulebook)...';
+        return;
+      }
+
+      if (pollAttempts >= MAX_POLL_ATTEMPTS) {
+        stopPolling();
+        isPolling.value = false;
+        errorMessage.value =
+          'Processing is taking longer than expected. Refresh to resume, or try again.';
+        // Keep session so refresh/resumeFromSession can continue.
+        return;
       }
     } catch {
       if (pollAttempts >= 10) {

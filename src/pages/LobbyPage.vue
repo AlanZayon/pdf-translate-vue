@@ -6,6 +6,7 @@ import AppFooter from '../components/layout/AppFooter.vue';
 import UiButton from '../components/shared/UiButton.vue';
 import UiCard from '../components/shared/UiCard.vue';
 import { useGameSessionSocket } from '../composables/useGameSessionSocket.js';
+import { isDevAuth } from '../composables/useAuth.js';
 import {
   fetchMe,
   fetchGameSession,
@@ -33,11 +34,26 @@ const liveEvents = ref([]);
 const presence = ref([]);
 const recording = ref(false);
 const voiceHint = ref('');
+const browserTtsEnabled = ref(true);
+const lastSpokenText = ref('');
+const devSeat = ref(
+  typeof localStorage !== 'undefined'
+    ? localStorage.getItem('devAuthToken') || 'dev-token'
+    : 'dev-token',
+);
 
 let mediaRecorder = null;
 let mediaChunks = [];
 let mediaStream = null;
 let currentAudio = null;
+let spokeFromSnapshot = false;
+
+function switchDevSeat(token) {
+  if (!isDevAuth) return;
+  localStorage.setItem('devAuthToken', token);
+  // Full reload so HTTP + WebSocket pick up the other user identity.
+  window.location.reload();
+}
 
 const sessionId = computed(() => route.params.sessionId);
 const isHost = computed(() => me.value && session.value && me.value.id === session.value.host_user_id);
@@ -79,14 +95,21 @@ function applySnapshot(snap) {
   if (snap.session) session.value = snap.session;
   if (snap.state) campaignState.value = snap.state;
   if (snap.presence) presence.value = snap.presence;
+  let latestNarration = '';
   for (const ev of snap.events || []) {
     if (ev.type === 'gm_narration' && ev.payload?.text) {
       lastNarration.value = ev.payload.text;
+      latestNarration = ev.payload.text;
     }
     liveEvents.value.push(ev);
   }
   if (liveEvents.value.length > 40) {
     liveEvents.value = liveEvents.value.slice(-40);
+  }
+  // On reconnect, speak the latest GM line once (opening / last turn).
+  if (!spokeFromSnapshot && latestNarration && snap.session?.status === 'ACTIVE') {
+    spokeFromSnapshot = true;
+    speakNarration(latestNarration);
   }
 }
 
@@ -102,8 +125,11 @@ function onLiveEvent(msg) {
   }
   if (msg.type === 'gm_narration' && msg.payload?.text) {
     lastNarration.value = msg.payload.text;
+    // Server TTS may follow as gm_audio; browser voice covers mock/off TTS.
+    speakNarration(msg.payload.text);
   }
   if (msg.type === 'gm_audio' && msg.payload?.data_base64) {
+    stopBrowserSpeech();
     playGmAudio(msg.payload);
   }
   if (msg.type === 'dice_result' || msg.type === 'check_result') {
@@ -144,7 +170,10 @@ async function load() {
     await refresh();
     connectWs();
   } catch {
-    error.value = 'GameSession not found or you are not a member.';
+    error.value =
+      isDevAuth && devSeat.value === 'player-2'
+        ? 'GameSession not found for Guest seat. Switch to Host seat, or join with the invite code.'
+        : 'GameSession not found or you are not a member.';
   } finally {
     loading.value = false;
   }
@@ -172,7 +201,14 @@ function toggleReady() {
 }
 
 function start() {
-  return run(() => startGameSession(sessionId.value));
+  return run(async () => {
+    const data = await startGameSession(sessionId.value);
+    if (data.opening) {
+      lastNarration.value = data.opening;
+      speakNarration(data.opening);
+    }
+    return data.session;
+  });
 }
 
 async function end() {
@@ -184,15 +220,27 @@ async function sendAction() {
   if (!text) return;
   busy.value = true;
   actionError.value = '';
+  voiceHint.value = 'GM is resolving your action…';
   try {
     const data = await submitSessionAction(sessionId.value, text);
     lastNarration.value = data.narration || '';
     campaignState.value = data.state || null;
     if (data.audio?.data_base64) playResponseAudioIfNeeded(data.audio);
+    else if (data.narration) speakNarration(data.narration);
     actionText.value = '';
+    voiceHint.value = '';
     await refresh();
   } catch (e) {
-    actionError.value = e.response?.data?.message || e.response?.data?.error || 'Action failed.';
+    const status = e.response?.status;
+    const msg = e.response?.data?.message || e.response?.data?.error;
+    if (e.code === 'ECONNABORTED' || /timeout/i.test(e.message || '')) {
+      actionError.value =
+        'O GM demorou demais (timeout). Se a narração aparecer em live events, ignore este erro e continue.';
+    } else if (status >= 500) {
+      actionError.value = msg || 'Erro no servidor ao resolver a ação. Tenta de novo.';
+    } else {
+      actionError.value = msg || 'Action failed.';
+    }
   } finally {
     busy.value = false;
   }
@@ -201,6 +249,7 @@ async function sendAction() {
 function playGmAudio(audioPayload) {
   if (!audioPayload?.data_base64) return;
   try {
+    stopBrowserSpeech();
     if (currentAudio) {
       currentAudio.pause();
       currentAudio = null;
@@ -212,6 +261,44 @@ function playGmAudio(audioPayload) {
   } catch {
     /* ignore decode/play failures — text narration remains */
   }
+}
+
+function stripForSpeech(text) {
+  return String(text || '')
+    .replace(/[#>*_`]/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function stopBrowserSpeech() {
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+}
+
+/** Homolog / fallback TTS — browser Speech Synthesis (no OpenAI key needed). */
+function speakNarration(text, { force = false } = {}) {
+  if (!browserTtsEnabled.value && !force) return;
+  const clean = stripForSpeech(text);
+  if (!clean || typeof window === 'undefined' || !window.speechSynthesis) return;
+  if (!force && clean === lastSpokenText.value) return;
+  stopBrowserSpeech();
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+  const utter = new SpeechSynthesisUtterance(clean.slice(0, 1200));
+  utter.rate = 1;
+  utter.pitch = 1;
+  const voices = window.speechSynthesis.getVoices?.() || [];
+  const preferred =
+    voices.find((v) => /en(-|_)US/i.test(v.lang) && /female|aria|jenny|sara/i.test(v.name)) ||
+    voices.find((v) => /^en/i.test(v.lang)) ||
+    null;
+  if (preferred) utter.voice = preferred;
+  lastSpokenText.value = clean;
+  window.speechSynthesis.speak(utter);
 }
 
 /** Prefer live gm_audio; only play HTTP audio when the socket is down. */
@@ -249,6 +336,7 @@ async function startHoldToSpeak() {
         campaignState.value = data.state || null;
         if (data.transcript) voiceHint.value = `Heard: ${data.transcript}`;
         if (data.audio?.data_base64) playResponseAudioIfNeeded(data.audio);
+        else if (data.narration) speakNarration(data.narration);
         await refresh();
       } catch (e) {
         actionError.value =
@@ -295,6 +383,7 @@ onMounted(load);
 onUnmounted(() => {
   disconnectWs();
   stopMicTracks();
+  stopBrowserSpeech();
   if (currentAudio) {
     currentAudio.pause();
     currentAudio = null;
@@ -309,15 +398,63 @@ onUnmounted(() => {
 
     <main class="container mx-auto px-4 py-10 flex-1 max-w-3xl">
       <p v-if="loading" class="text-muted text-center">Loading lobby...</p>
-      <p v-else-if="error" class="text-danger text-center">{{ error }}</p>
+      <div v-else-if="error" class="max-w-md mx-auto text-center space-y-4">
+        <p class="text-danger">{{ error }}</p>
+        <UiCard v-if="isDevAuth" class="border border-gold/30 text-left" padding="p-4">
+          <p class="text-sm text-gold mb-2">Homolog seat (current: {{ devSeat === 'player-2' ? 'Guest' : 'Host' }})</p>
+          <div class="flex flex-wrap gap-2">
+            <UiButton
+              size="sm"
+              :variant="devSeat === 'dev-token' ? 'primary' : 'ghost'"
+              @click="switchDevSeat('dev-token')"
+            >
+              Host seat
+            </UiButton>
+            <UiButton
+              size="sm"
+              :variant="devSeat === 'player-2' ? 'primary' : 'ghost'"
+              @click="switchDevSeat('player-2')"
+            >
+              Guest seat
+            </UiButton>
+          </div>
+        </UiCard>
+      </div>
       <template v-else-if="session">
         <p class="text-sm text-muted mb-2 uppercase tracking-wider">GameSession lobby</p>
         <h1 class="font-display text-3xl text-gold mb-2">{{ session.campaign_title }}</h1>
-        <p class="text-muted text-sm mb-6">
+        <p class="text-muted text-sm mb-2">
           Status: {{ session.status }}
           · {{ session.players.length }} / 4 players
           · live {{ wsConnected ? 'connected' : 'reconnecting…' }}
         </p>
+        <p v-if="me" class="text-xs text-muted mb-4">
+          Signed in as {{ me.email || me.id }}
+          <span v-if="isHost"> · host</span>
+        </p>
+        <UiCard v-if="isDevAuth" class="mb-6 border border-gold/30" padding="p-4">
+          <p class="text-sm text-gold mb-2">Homolog — two seats need two identities</p>
+          <p class="text-xs text-muted mb-3">
+            Use Host in one browser and Guest in another (or a private window). Same seat =
+            same player, so claim/ready will fight each other.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <UiButton
+              size="sm"
+              :variant="devSeat === 'dev-token' ? 'primary' : 'ghost'"
+              @click="switchDevSeat('dev-token')"
+            >
+              Host seat
+            </UiButton>
+            <UiButton
+              size="sm"
+              :variant="devSeat === 'player-2' ? 'primary' : 'ghost'"
+              @click="switchDevSeat('player-2')"
+            >
+              Guest seat
+            </UiButton>
+          </div>
+        </UiCard>
 
         <UiCard class="mb-6" padding="p-6">
           <h2 class="font-display text-lg text-gold mb-2">Invite code</h2>
@@ -438,7 +575,22 @@ onUnmounted(() => {
             </UiButton>
           </div>
           <p v-if="voiceHint" class="mt-2 text-sm text-muted">{{ voiceHint }}</p>
-          <p v-if="lastNarration" class="mt-4 text-text leading-relaxed">{{ lastNarration }}</p>
+          <p v-if="lastNarration" class="mt-4 text-text leading-relaxed">
+            <span class="block text-xs uppercase tracking-wider text-gold mb-1">GM</span>
+            {{ lastNarration }}
+          </p>
+          <div v-if="lastNarration" class="mt-3 flex flex-wrap gap-2 items-center">
+            <UiButton size="sm" variant="ghost" @click="speakNarration(lastNarration, { force: true })">
+              Narrar em voz alta
+            </UiButton>
+            <UiButton
+              size="sm"
+              variant="ghost"
+              @click="browserTtsEnabled = !browserTtsEnabled; if (!browserTtsEnabled) stopBrowserSpeech()"
+            >
+              {{ browserTtsEnabled ? 'Voz do browser: on' : 'Voz do browser: off' }}
+            </UiButton>
+          </div>
           <p v-if="campaignState?.last_dice" class="mt-2 text-sm text-muted">
             Last dice: {{ campaignState.last_dice.total }}
           </p>
@@ -458,6 +610,9 @@ onUnmounted(() => {
         </p>
         <p v-else-if="isHost && session.status === 'LOBBY' && !canStart" class="text-sm text-muted">
           Start needs 2–4 players, each with a claimed character and ready.
+          <span v-if="(session.characters || []).length < (session.players || []).length">
+            Not enough claimable characters for every player — refresh the lobby.
+          </span>
         </p>
       </template>
     </main>

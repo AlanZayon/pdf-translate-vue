@@ -3,7 +3,6 @@ import { API_URL, fetchSessionSnapshot } from '../services/campaignApi.js';
 import { getAuthHeaders, isDevAuth } from './useAuth.js';
 
 async function authToken() {
-  if (isDevAuth) return 'dev-token';
   const headers = await getAuthHeaders();
   const auth = headers.Authorization || '';
   return auth.startsWith('Bearer ') ? auth.slice(7) : '';

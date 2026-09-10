@@ -155,7 +155,7 @@ export async function setSessionReady(sessionId, ready = true) {
 
 export async function startGameSession(sessionId) {
   const { data } = await client.post(`/sessions/${sessionId}/start`);
-  return data.session;
+  return data;
 }
 
 export async function endGameSession(sessionId) {
@@ -164,7 +164,11 @@ export async function endGameSession(sessionId) {
 }
 
 export async function submitSessionAction(sessionId, text, { speak = true } = {}) {
-  const { data } = await client.post(`/sessions/${sessionId}/actions`, { text, speak });
+  const { data } = await client.post(
+    `/sessions/${sessionId}/actions`,
+    { text, speak },
+    { timeout: 300000 },
+  );
   return data;
 }
 
@@ -175,7 +179,7 @@ export async function submitSessionVoiceAction(sessionId, blob, contentType = 'a
   form.append('content_type', type);
   const { data } = await client.post(`/sessions/${sessionId}/actions/voice`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 180000,
+    timeout: 300000,
   });
   return data;
 }
