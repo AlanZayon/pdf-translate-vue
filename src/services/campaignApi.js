@@ -172,6 +172,20 @@ export async function submitSessionAction(sessionId, text, { speak = true } = {}
   return data;
 }
 
+export async function confirmSessionRoll(
+  sessionId,
+  pendingId,
+  { speak = true, chosen_skill, chosen_index } = {},
+) {
+  const body = { pending_id: pendingId, speak };
+  if (chosen_skill) body.chosen_skill = chosen_skill;
+  if (chosen_index != null && chosen_index !== '') body.chosen_index = chosen_index;
+  const { data } = await client.post(`/sessions/${sessionId}/rolls/confirm`, body, {
+    timeout: 300000,
+  });
+  return data;
+}
+
 export async function submitSessionVoiceAction(sessionId, blob, contentType = 'audio/webm') {
   const form = new FormData();
   const type = contentType || blob.type || 'audio/webm';

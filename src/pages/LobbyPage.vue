@@ -15,6 +15,7 @@ import {
   startGameSession,
   endGameSession,
   submitSessionAction,
+  confirmSessionRoll,
   submitSessionVoiceAction,
 } from '../services/campaignApi.js';
 
@@ -76,6 +77,33 @@ const canStart = computed(
     claimedCount.value <= 4 &&
     allReady.value,
 );
+
+const pendingCheck = computed(() => campaignState.value?.pending_check || null);
+const rollAlternatives = computed(() => {
+  const pending = pendingCheck.value;
+  if (!pending) return [];
+  const alts = pending.alternatives;
+  if (Array.isArray(alts) && alts.length > 1) return alts;
+  return [
+    {
+      skill: pending.skill || 'check',
+      notation: pending.notation,
+      dc: pending.dc,
+    },
+  ];
+});
+const rollCallNeedsChoice = computed(
+  () =>
+    Array.isArray(pendingCheck.value?.alternatives) &&
+    pendingCheck.value.alternatives.length > 1,
+);
+const isMyRollCall = computed(
+  () =>
+    Boolean(pendingCheck.value) &&
+    myPlayer.value?.character_id &&
+    pendingCheck.value.character_id === myPlayer.value.character_id,
+);
+const rollCallBlocksActions = computed(() => Boolean(pendingCheck.value));
 
 function characterName(characterId) {
   const c = session.value?.characters?.find((ch) => ch.id === characterId);
@@ -145,6 +173,13 @@ function onLiveEvent(msg) {
     campaignState.value = {
       ...(campaignState.value || {}),
       last_dice: msg.payload,
+      pending_check: null,
+    };
+  }
+  if (msg.type === 'roll_requested') {
+    campaignState.value = {
+      ...(campaignState.value || {}),
+      pending_check: msg.payload,
     };
   }
   if (msg.type === 'presence_up' || msg.type === 'presence_down') {
@@ -232,6 +267,10 @@ async function end() {
 async function sendAction() {
   const text = actionText.value.trim();
   if (!text) return;
+  if (rollCallBlocksActions.value) {
+    actionError.value = 'A Roll Call is pending. Confirm the roll first.';
+    return;
+  }
   busy.value = true;
   actionError.value = '';
   voiceHint.value = 'GM is resolving your action…';
@@ -262,6 +301,47 @@ async function sendAction() {
   }
 }
 
+async function confirmPendingRoll(alt, index) {
+  if (!isMyRollCall.value || !pendingCheck.value?.id) return;
+  busy.value = true;
+  actionError.value = '';
+  voiceHint.value = 'Resolving the roll…';
+  try {
+    const extra = {};
+    if (rollCallNeedsChoice.value) {
+      if (alt?.skill) extra.chosen_skill = alt.skill;
+      if (index != null) extra.chosen_index = index;
+    }
+    const data = await confirmSessionRoll(sessionId.value, pendingCheck.value.id, extra);
+    lastNarration.value = data.narration || lastNarration.value;
+    campaignState.value = data.state || campaignState.value;
+    if (data.audio?.data_base64) {
+      lastGmAudio.value = data.audio;
+      playResponseAudioIfNeeded(data.audio);
+    } else if (data.narration) speakNarration(data.narration);
+    voiceHint.value = '';
+    await refresh();
+  } catch (e) {
+    const msg = e.response?.data?.message || e.response?.data?.error;
+    actionError.value = msg || 'Could not confirm the roll.';
+  } finally {
+    busy.value = false;
+  }
+}
+
+function diceSummary(dice) {
+  if (!dice) return '';
+  const parts = [];
+  if (dice.skill) parts.push(dice.skill);
+  if (dice.notation) parts.push(dice.notation);
+  if (Array.isArray(dice.rolls) && dice.rolls.length) parts.push(`rolls ${dice.rolls.join(', ')}`);
+  if (dice.total != null) parts.push(`total ${dice.total}`);
+  if (dice.dc != null) parts.push(`DC ${dice.dc}`);
+  if (dice.success === true) parts.push('success');
+  if (dice.success === false) parts.push('failure');
+  return parts.join(' · ');
+}
+
 function playGmAudio(audioPayload) {
   if (!audioPayload?.data_base64) return;
   try {
@@ -290,7 +370,13 @@ function replayNarration() {
 
 function stripForSpeech(text) {
   return String(text || '')
-    .replace(/[#>*_`]/g, '')
+    .replace(/\*+\s*\((?:[^()]|\([^()]*\))*\)\.?\s*\*+/g, '')
+    .replace(/\*+[^*]+\*+/g, '')
+    .replace(
+      /\((?:[^()]|\([^()]*\))*(aguardando|esperando o jogador|waiting for)(?:[^()]|\([^()]*\))*\)/gi,
+      '',
+    )
+    .replace(/[#>`_]/g, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
@@ -335,6 +421,10 @@ function playResponseAudioIfNeeded(audio) {
 
 async function startHoldToSpeak() {
   if (busy.value || recording.value || session.value?.status !== 'ACTIVE') return;
+  if (rollCallBlocksActions.value) {
+    actionError.value = 'A Roll Call is pending. Confirm the roll first.';
+    return;
+  }
   actionError.value = '';
   voiceHint.value = '';
   try {
@@ -580,19 +670,61 @@ onUnmounted(() => {
         </p>
         <UiCard v-if="session.status === 'ACTIVE'" class="mb-6" padding="p-6">
           <h2 class="font-display text-lg text-gold mb-3">Your action</h2>
+          <div
+            v-if="pendingCheck"
+            class="mb-4 rounded border border-gold/40 bg-void px-4 py-3"
+          >
+            <p class="text-xs uppercase tracking-wider text-gold mb-1">Roll Call</p>
+            <p class="text-text">
+              {{ characterName(pendingCheck.character_id) }}
+              <template v-if="rollCallNeedsChoice">: escolha um teste</template>
+              <template v-else>
+                : {{ pendingCheck.skill || 'check' }}
+                ({{ pendingCheck.notation || 'dice' }})
+                <span v-if="pendingCheck.dc != null"> DC {{ pendingCheck.dc }}</span>
+              </template>
+            </p>
+            <p v-if="pendingCheck.reason" class="mt-1 text-sm text-muted">
+              {{ pendingCheck.reason }}
+            </p>
+            <div v-if="isMyRollCall" class="mt-3 flex flex-wrap gap-2">
+              <UiButton
+                v-for="(alt, idx) in rollAlternatives"
+                :key="`${alt.skill}-${idx}`"
+                variant="primary"
+                :disabled="busy"
+                @click="confirmPendingRoll(alt, idx)"
+              >
+                <template v-if="rollCallNeedsChoice">
+                  Rolar {{ alt.skill }}
+                  <span v-if="alt.notation">({{ alt.notation }})</span>
+                  <span v-if="alt.dc != null"> DC {{ alt.dc }}</span>
+                </template>
+                <template v-else>Rolar</template>
+              </UiButton>
+            </div>
+            <p v-else class="mt-2 text-sm text-muted">
+              Waiting for {{ characterName(pendingCheck.character_id) }} to confirm the roll.
+            </p>
+          </div>
           <textarea
             v-model="actionText"
             rows="3"
             class="w-full bg-void border border-muted/30 rounded px-3 py-2 text-text mb-3"
             placeholder="What do you do?"
+            :disabled="busy || rollCallBlocksActions"
           />
           <div class="flex flex-wrap gap-3 items-center">
-            <UiButton variant="primary" :disabled="busy || !actionText.trim()" @click="sendAction">
+            <UiButton
+              variant="primary"
+              :disabled="busy || rollCallBlocksActions || !actionText.trim()"
+              @click="sendAction"
+            >
               Submit action
             </UiButton>
             <UiButton
               variant="ghost"
-              :disabled="busy"
+              :disabled="busy || rollCallBlocksActions"
               @pointerdown.prevent="startHoldToSpeak"
               @pointerup.prevent="stopHoldToSpeak"
               @pointerleave.prevent="stopHoldToSpeak"
@@ -619,7 +751,7 @@ onUnmounted(() => {
             </UiButton>
           </div>
           <p v-if="campaignState?.last_dice" class="mt-2 text-sm text-muted">
-            Last dice: {{ campaignState.last_dice.total }}
+            Last dice: {{ diceSummary(campaignState.last_dice) }}
           </p>
         </UiCard>
 
