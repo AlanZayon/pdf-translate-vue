@@ -105,6 +105,50 @@ const isMyRollCall = computed(
 );
 const rollCallBlocksActions = computed(() => Boolean(pendingCheck.value));
 
+const activeCombat = computed(() => {
+  const combat = campaignState.value?.combat;
+  if (!combat || combat.status !== 'active') return null;
+  return combat;
+});
+
+const combatCombatantsOrdered = computed(() => {
+  const combat = activeCombat.value;
+  if (!combat?.combatants?.length) return [];
+  return [...combat.combatants].sort((a, b) => {
+    const aHas = a.initiative != null && a.initiative !== '';
+    const bHas = b.initiative != null && b.initiative !== '';
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    if (aHas && bHas) return Number(b.initiative) - Number(a.initiative);
+    return 0;
+  });
+});
+
+const currentCombatant = computed(() => {
+  const list = combatCombatantsOrdered.value;
+  if (!list.length) return null;
+  const idx = Number(activeCombat.value?.turn_index || 0) % list.length;
+  return list[idx];
+});
+
+function patchCombatState(patch) {
+  campaignState.value = {
+    ...(campaignState.value || {}),
+    combat: patch,
+  };
+}
+
+function mergeCombatantFields(combatantId, fields) {
+  const combat = activeCombat.value;
+  if (!combat?.combatants) return;
+  const combatants = combat.combatants.map((c) =>
+    c.id === combatantId || c.character_id === combatantId || c.name === combatantId
+      ? { ...c, ...fields }
+      : c,
+  );
+  patchCombatState({ ...combat, combatants });
+}
+
 function characterName(characterId) {
   const c = session.value?.characters?.find((ch) => ch.id === characterId);
   return c?.display_name || '—';
@@ -181,6 +225,27 @@ function onLiveEvent(msg) {
       ...(campaignState.value || {}),
       pending_check: msg.payload,
     };
+  }
+  if (msg.type === 'combat_started') {
+    patchCombatState(msg.payload);
+  }
+  if (msg.type === 'combat_ended') {
+    patchCombatState(null);
+  }
+  if (msg.type === 'combat_turn') {
+    const combat = activeCombat.value;
+    if (combat) {
+      patchCombatState({
+        ...combat,
+        round: msg.payload?.round ?? combat.round,
+        turn_index: msg.payload?.turn_index ?? combat.turn_index,
+      });
+    }
+  }
+  if (msg.type === 'combatant_updated') {
+    const id = msg.payload?.combatant_id;
+    const fields = msg.payload?.fields || {};
+    if (id) mergeCombatantFields(id, fields);
   }
   if (msg.type === 'presence_up' || msg.type === 'presence_down') {
     const uid = msg.payload?.user_id;
@@ -293,6 +358,8 @@ async function sendAction() {
         'O GM demorou demais (timeout). Se a narração aparecer em live events, ignore este erro e continue.';
     } else if (status >= 500) {
       actionError.value = msg || 'Erro no servidor ao resolver a ação. Tenta de novo.';
+    } else if (status === 409 && e.response?.data?.error === 'not_your_turn') {
+      actionError.value = msg || 'Não é o seu turno no combate.';
     } else {
       actionError.value = msg || 'Action failed.';
     }
@@ -668,6 +735,46 @@ onUnmounted(() => {
         <p v-if="session.status === 'ACTIVE'" class="text-sm text-gold mb-4">
           Session is active. Text stays primary; hold the mic to speak an action.
         </p>
+        <UiCard
+          v-if="session.status === 'ACTIVE' && activeCombat"
+          class="mb-6"
+          padding="p-6"
+        >
+          <h2 class="font-display text-lg text-gold mb-1">Combat</h2>
+          <p class="text-sm text-muted mb-4">
+            Round {{ activeCombat.round || 1 }}
+            <span v-if="currentCombatant">
+              · Turn:
+              <span class="text-text">{{ currentCombatant.name }}</span>
+            </span>
+          </p>
+          <ul class="space-y-2">
+            <li
+              v-for="c in combatCombatantsOrdered"
+              :key="c.id"
+              class="flex flex-wrap items-center justify-between gap-2 rounded border px-3 py-2 text-sm"
+              :class="
+                currentCombatant?.id === c.id
+                  ? 'border-gold/50 bg-void'
+                  : 'border-muted/20'
+              "
+            >
+              <span class="text-text">
+                <span v-if="c.initiative != null" class="text-muted mr-2">{{ c.initiative }}</span>
+                {{ c.name }}
+                <span class="text-muted">({{ c.side || c.kind }})</span>
+              </span>
+              <span class="text-muted">
+                <template v-if="c.hp != null">
+                  HP {{ c.hp }}<template v-if="c.max_hp != null">/{{ c.max_hp }}</template>
+                </template>
+                <template v-if="c.status?.length">
+                  · {{ c.status.join(', ') }}
+                </template>
+              </span>
+            </li>
+          </ul>
+        </UiCard>
         <UiCard v-if="session.status === 'ACTIVE'" class="mb-6" padding="p-6">
           <h2 class="font-display text-lg text-gold mb-3">Your action</h2>
           <div
