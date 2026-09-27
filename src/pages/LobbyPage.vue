@@ -36,8 +36,6 @@ const liveEvents = ref([]);
 const presence = ref([]);
 const recording = ref(false);
 const voiceHint = ref('');
-const browserTtsEnabled = ref(true);
-const lastSpokenText = ref('');
 const devSeat = ref(
   typeof localStorage !== 'undefined'
     ? localStorage.getItem('devAuthToken') || 'dev-token'
@@ -174,6 +172,7 @@ function applySnapshot(snap) {
     if (ev.type === 'gm_narration' && ev.payload?.text) {
       lastNarration.value = ev.payload.text;
       latestNarration = ev.payload.text;
+      latestAudio = null;
     }
     if (ev.type === 'gm_audio' && ev.payload?.data_base64) {
       latestAudio = ev.payload;
@@ -184,11 +183,10 @@ function applySnapshot(snap) {
     liveEvents.value = liveEvents.value.slice(-40);
   }
   if (latestAudio) lastGmAudio.value = latestAudio;
-  // On reconnect, speak the latest GM line once (opening / last turn).
-  if (!spokeFromSnapshot && latestNarration && snap.session?.status === 'ACTIVE') {
+  // On reconnect, play the latest GM audio once (opening / last turn).
+  if (!spokeFromSnapshot && latestNarration && latestAudio && snap.session?.status === 'ACTIVE') {
     spokeFromSnapshot = true;
-    if (latestAudio) playGmAudio(latestAudio);
-    else speakNarration(latestNarration);
+    playGmAudio(latestAudio);
   }
 }
 
@@ -205,12 +203,9 @@ function onLiveEvent(msg) {
   if (msg.type === 'gm_narration' && msg.payload?.text) {
     lastNarration.value = msg.payload.text;
     lastGmAudio.value = null;
-    // Server TTS may follow as gm_audio; browser voice covers mock/off TTS.
-    speakNarration(msg.payload.text);
   }
   if (msg.type === 'gm_audio' && msg.payload?.data_base64) {
     lastGmAudio.value = msg.payload;
-    stopBrowserSpeech();
     playGmAudio(msg.payload);
   }
   if (msg.type === 'dice_result' || msg.type === 'check_result') {
@@ -317,8 +312,6 @@ function start() {
       if (data.audio?.data_base64) {
         lastGmAudio.value = data.audio;
         playResponseAudioIfNeeded(data.audio);
-      } else {
-        speakNarration(data.opening);
       }
     }
     return data.session;
@@ -346,7 +339,7 @@ async function sendAction() {
     if (data.audio?.data_base64) {
       lastGmAudio.value = data.audio;
       playResponseAudioIfNeeded(data.audio);
-    } else if (data.narration) speakNarration(data.narration);
+    }
     actionText.value = '';
     voiceHint.value = '';
     await refresh();
@@ -385,7 +378,7 @@ async function confirmPendingRoll(alt, index) {
     if (data.audio?.data_base64) {
       lastGmAudio.value = data.audio;
       playResponseAudioIfNeeded(data.audio);
-    } else if (data.narration) speakNarration(data.narration);
+    }
     voiceHint.value = '';
     await refresh();
   } catch (e) {
@@ -413,7 +406,6 @@ function playGmAudio(audioPayload) {
   if (!audioPayload?.data_base64) return;
   try {
     lastGmAudio.value = audioPayload;
-    stopBrowserSpeech();
     if (currentAudio) {
       currentAudio.pause();
       currentAudio = null;
@@ -428,55 +420,7 @@ function playGmAudio(audioPayload) {
 }
 
 function replayNarration() {
-  if (lastGmAudio.value?.data_base64) {
-    playGmAudio(lastGmAudio.value);
-    return;
-  }
-  speakNarration(lastNarration.value, { force: true });
-}
-
-function stripForSpeech(text) {
-  return String(text || '')
-    .replace(/\*+\s*\((?:[^()]|\([^()]*\))*\)\.?\s*\*+/g, '')
-    .replace(/\*+[^*]+\*+/g, '')
-    .replace(
-      /\((?:[^()]|\([^()]*\))*(aguardando|esperando o jogador|waiting for)(?:[^()]|\([^()]*\))*\)/gi,
-      '',
-    )
-    .replace(/[#>`_]/g, '')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function stopBrowserSpeech() {
-  if (typeof window !== 'undefined' && window.speechSynthesis) {
-    window.speechSynthesis.cancel();
-  }
-}
-
-/** Homolog / fallback TTS — browser Speech Synthesis (no OpenAI key needed). */
-function speakNarration(text, { force = false } = {}) {
-  if (!browserTtsEnabled.value && !force) return;
-  const clean = stripForSpeech(text);
-  if (!clean || typeof window === 'undefined' || !window.speechSynthesis) return;
-  if (!force && clean === lastSpokenText.value) return;
-  stopBrowserSpeech();
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio = null;
-  }
-  const utter = new SpeechSynthesisUtterance(clean.slice(0, 1200));
-  utter.rate = 1;
-  utter.pitch = 1;
-  const voices = window.speechSynthesis.getVoices?.() || [];
-  const preferred =
-    voices.find((v) => /en(-|_)US/i.test(v.lang) && /female|aria|jenny|sara/i.test(v.name)) ||
-    voices.find((v) => /^en/i.test(v.lang)) ||
-    null;
-  if (preferred) utter.voice = preferred;
-  lastSpokenText.value = clean;
-  window.speechSynthesis.speak(utter);
+  if (lastGmAudio.value?.data_base64) playGmAudio(lastGmAudio.value);
 }
 
 /** Prefer live gm_audio; only play HTTP audio when the socket is down. */
@@ -520,7 +464,7 @@ async function startHoldToSpeak() {
         if (data.audio?.data_base64) {
           lastGmAudio.value = data.audio;
           playResponseAudioIfNeeded(data.audio);
-        } else if (data.narration) speakNarration(data.narration);
+        }
         await refresh();
       } catch (e) {
         actionError.value =
@@ -567,7 +511,6 @@ onMounted(load);
 onUnmounted(() => {
   disconnectWs();
   stopMicTracks();
-  stopBrowserSpeech();
   if (currentAudio) {
     currentAudio.pause();
     currentAudio = null;
@@ -846,15 +789,13 @@ onUnmounted(() => {
             {{ lastNarration }}
           </p>
           <div v-if="lastNarration" class="mt-3 flex flex-wrap gap-2 items-center">
-            <UiButton size="sm" variant="ghost" @click="replayNarration">
-              Narrar em voz alta
-            </UiButton>
             <UiButton
               size="sm"
               variant="ghost"
-              @click="browserTtsEnabled = !browserTtsEnabled; if (!browserTtsEnabled) stopBrowserSpeech()"
+              :disabled="!lastGmAudio?.data_base64"
+              @click="replayNarration"
             >
-              {{ browserTtsEnabled ? 'Voz do browser: on' : 'Voz do browser: off' }}
+              Narrar em voz alta
             </UiButton>
           </div>
           <p v-if="campaignState?.last_dice" class="mt-2 text-sm text-muted">
