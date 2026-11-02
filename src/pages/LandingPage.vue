@@ -1,24 +1,35 @@
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import SiteHeader from '../components/layout/SiteHeader.vue';
 import AppFooter from '../components/layout/AppFooter.vue';
 import UiButton from '../components/shared/UiButton.vue';
 import { Sparkles, BookOpen, Wand2, ChevronRight } from '@lucide/vue';
 import { trackEvent } from '../composables/useAnalytics.js';
-import { openSignIn } from '../composables/useAuth.js';
+import { ensureAuthReady, isSignedIn, openSignIn } from '../composables/useAuth.js';
 
 const route = useRoute();
 const router = useRouter();
 
-onMounted(() => {
+function goToRedirect() {
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/app';
+  router.replace(redirect);
+}
+
+onMounted(async () => {
   trackEvent('landing_view');
-  if (route.query.signin === '1') {
-    openSignIn().then(() => {
-      const redirect = route.query.redirect || '/app';
-      router.replace(redirect);
-    });
+  if (route.query.signin !== '1') return;
+  await ensureAuthReady();
+  if (isSignedIn.value) {
+    goToRedirect();
+    return;
   }
+  await openSignIn();
+  const stop = watch(isSignedIn, (signed) => {
+    if (!signed) return;
+    stop();
+    goToRedirect();
+  });
 });
 
 const steps = [

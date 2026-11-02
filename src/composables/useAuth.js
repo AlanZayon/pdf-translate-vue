@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '';
 export const authConfigError = ref('');
@@ -24,8 +24,35 @@ export const isDevAuth = resolveAuthDevMode();
 export const isSignedIn = ref(isDevAuth);
 export const authReady = ref(isDevAuth);
 
+let clerkSessionWatchStarted = false;
+
+function waitUntilClerkLoaded(auth) {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (auth.isLoaded?.value !== false) {
+        resolve();
+      } else {
+        setTimeout(check, 50);
+      }
+    };
+    check();
+  });
+}
+
+function syncSignedInFromClerk(auth) {
+  isSignedIn.value = auth.isSignedIn?.value ?? false;
+  if (clerkSessionWatchStarted) return;
+  clerkSessionWatchStarted = true;
+  watch(
+    () => auth.isSignedIn?.value,
+    (signed) => {
+      isSignedIn.value = !!signed;
+    },
+    { flush: 'sync' },
+  );
+}
+
 export async function ensureAuthReady() {
-  if (authReady.value) return;
   if (isDevAuth) {
     authReady.value = true;
     isSignedIn.value = true;
@@ -34,18 +61,9 @@ export async function ensureAuthReady() {
   try {
     const { useAuth } = await import('@clerk/vue');
     const auth = useAuth();
-    await new Promise((resolve) => {
-      const check = () => {
-        if (auth.isLoaded?.value !== false) {
-          authReady.value = true;
-          isSignedIn.value = auth.isSignedIn?.value ?? false;
-          resolve();
-        } else {
-          setTimeout(check, 50);
-        }
-      };
-      check();
-    });
+    await waitUntilClerkLoaded(auth);
+    syncSignedInFromClerk(auth);
+    authReady.value = true;
   } catch {
     authReady.value = true;
   }
