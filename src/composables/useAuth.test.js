@@ -13,17 +13,22 @@ describe('ensureAuthReady with Clerk (VITE_AUTH_DEV_MODE=false)', () => {
     vi.doUnmock('@clerk/vue');
   });
 
-  it('updates isSignedIn on later ensureAuthReady after Clerk sign-in', async () => {
-    const isLoaded = ref(true);
-    const isSignedInClerk = ref(false);
+  it('does not call useAuth (router/async inject has no context) and still sees sign-in', async () => {
     vi.doMock('@clerk/vue', () => ({
-      useAuth: () => ({ isLoaded, isSignedIn: isSignedInClerk }),
-      getToken: async () => 'tok',
-      useClerk: () => ({ value: { openSignIn: () => {} } }),
+      useAuth: () => {
+        throw new Error('useAuth() requires setup/inject context');
+      },
+      useClerk: () => {
+        throw new Error('useClerk() requires setup/inject context');
+      },
     }));
 
     const auth = await import('./useAuth.js');
     expect(auth.isDevAuth).toBe(false);
+
+    const isLoaded = ref(true);
+    const isSignedInClerk = ref(false);
+    auth.bindClerkAuth({ isLoaded, isSignedIn: isSignedInClerk });
 
     await auth.ensureAuthReady();
     expect(auth.authReady.value).toBe(true);
@@ -34,16 +39,12 @@ describe('ensureAuthReady with Clerk (VITE_AUTH_DEV_MODE=false)', () => {
     expect(auth.isSignedIn.value).toBe(true);
   });
 
-  it('keeps isSignedIn in sync when Clerk session changes after first load', async () => {
+  it('keeps isSignedIn in sync when Clerk session changes after bind', async () => {
+    const auth = await import('./useAuth.js');
     const isLoaded = ref(true);
     const isSignedInClerk = ref(false);
-    vi.doMock('@clerk/vue', () => ({
-      useAuth: () => ({ isLoaded, isSignedIn: isSignedInClerk }),
-      getToken: async () => 'tok',
-      useClerk: () => ({ value: { openSignIn: () => {} } }),
-    }));
+    auth.bindClerkAuth({ isLoaded, isSignedIn: isSignedInClerk });
 
-    const auth = await import('./useAuth.js');
     await auth.ensureAuthReady();
     expect(auth.isSignedIn.value).toBe(false);
 

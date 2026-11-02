@@ -22,8 +22,6 @@ if (hasAnalyticsConsent()) {
 const clerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 const app = createApp(App);
-app.use(router);
-initSentry(app, router);
 
 if (clerkKey) {
   app.use(clerkPlugin, {
@@ -33,4 +31,6 @@ if (clerkKey) {
   });
 }
 
+app.use(router);
+initSentry(app, router);
 app.mount('#app');

@@ -38,7 +38,7 @@ defineProps({
           Open App
         </RouterLink>
         <template v-if="!isDevAuth">
-          <SignInButton mode="modal">
+          <SignInButton mode="modal" force-redirect-url="/app">
             <button type="button" class="text-sm text-muted hover:text-gold hidden sm:inline">Sign in</button>
           </SignInButton>
           <UserButton />

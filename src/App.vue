@@ -1,7 +1,12 @@
 <script setup>
 import { RouterView } from 'vue-router';
+import { useAuth, useClerk } from '@clerk/vue';
 import CookieBanner from './components/shared/CookieBanner.vue';
-import { authConfigError } from './composables/useAuth.js';
+import { authConfigError, bindClerkAuth, showAuthUI } from './composables/useAuth.js';
+
+if (showAuthUI.value) {
+  bindClerkAuth(useAuth(), useClerk());
+}
 </script>
 
 <template>

@@ -24,7 +24,29 @@ export const isDevAuth = resolveAuthDevMode();
 export const isSignedIn = ref(isDevAuth);
 export const authReady = ref(isDevAuth);
 
-let clerkSessionWatchStarted = false;
+let clerkAuth = null;
+let clerkInstance = null;
+const clerkBound = ref(false);
+
+function waitFor(predicateRef, timeoutMs = 8000) {
+  if (predicateRef.value) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      stop();
+      resolve();
+    }, timeoutMs);
+    const stop = watch(
+      predicateRef,
+      (value) => {
+        if (!value) return;
+        clearTimeout(timer);
+        stop();
+        resolve();
+      },
+      { flush: 'sync' },
+    );
+  });
+}
 
 function waitUntilClerkLoaded(auth) {
   return new Promise((resolve) => {
@@ -40,15 +62,25 @@ function waitUntilClerkLoaded(auth) {
 }
 
 function syncSignedInFromClerk(auth) {
-  isSignedIn.value = auth.isSignedIn?.value ?? false;
-  if (clerkSessionWatchStarted) return;
-  clerkSessionWatchStarted = true;
+  isSignedIn.value = !!auth.isSignedIn?.value;
+}
+
+/**
+ * Bind Clerk composables from a Vue setup() context (App.vue).
+ * Router guards cannot call useAuth() after await — inject() has no context.
+ */
+export function bindClerkAuth(auth, clerk = null) {
+  clerkAuth = auth;
+  clerkInstance = clerk;
+  clerkBound.value = true;
   watch(
-    () => auth.isSignedIn?.value,
-    (signed) => {
-      isSignedIn.value = !!signed;
+    () => [auth.isLoaded?.value, auth.isSignedIn?.value],
+    () => {
+      if (auth.isLoaded?.value === false) return;
+      syncSignedInFromClerk(auth);
+      authReady.value = true;
     },
-    { flush: 'sync' },
+    { immediate: true, flush: 'sync' },
   );
 }
 
@@ -58,15 +90,33 @@ export async function ensureAuthReady() {
     isSignedIn.value = true;
     return;
   }
-  try {
-    const { useAuth } = await import('@clerk/vue');
-    const auth = useAuth();
-    await waitUntilClerkLoaded(auth);
-    syncSignedInFromClerk(auth);
+  if (!clerkPublishableKey) {
     authReady.value = true;
-  } catch {
-    authReady.value = true;
+    return;
   }
+  await waitFor(clerkBound);
+  if (!clerkAuth) {
+    authReady.value = true;
+    return;
+  }
+  await waitUntilClerkLoaded(clerkAuth);
+  syncSignedInFromClerk(clerkAuth);
+  authReady.value = true;
+}
+
+async function resolveClerkToken() {
+  const getToken = clerkAuth?.getToken;
+  if (typeof getToken === 'function') {
+    return getToken();
+  }
+  if (typeof getToken?.value === 'function') {
+    return getToken.value();
+  }
+  const clerk = clerkInstance?.value ?? clerkInstance;
+  if (clerk?.session?.getToken) {
+    return clerk.session.getToken();
+  }
+  return null;
 }
 
 export async function getAuthHeaders() {
@@ -79,8 +129,7 @@ export async function getAuthHeaders() {
     return { Authorization: `Bearer ${token}` };
   }
   try {
-    const { getToken } = await import('@clerk/vue');
-    const token = await getToken();
+    const token = await resolveClerkToken();
     if (token) return { Authorization: `Bearer ${token}` };
   } catch {
     /* ignore */
@@ -93,13 +142,8 @@ export async function openSignIn() {
     isSignedIn.value = true;
     return;
   }
-  try {
-    const { useClerk } = await import('@clerk/vue');
-    const clerk = useClerk();
-    clerk.value?.openSignIn?.();
-  } catch {
-    /* ignore */
-  }
+  const clerk = clerkInstance?.value ?? clerkInstance;
+  clerk?.openSignIn?.();
 }
 
 export const showAuthUI = computed(() => !isDevAuth && clerkPublishableKey);
