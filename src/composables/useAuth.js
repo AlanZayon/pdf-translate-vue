@@ -105,16 +105,18 @@ export async function ensureAuthReady() {
 }
 
 async function resolveClerkToken() {
+  // Clerk session JWTs expire in ~60s; skipCache avoids sending a stale cached token.
+  const opts = { skipCache: true };
   const getToken = clerkAuth?.getToken;
   if (typeof getToken === 'function') {
-    return getToken();
+    return getToken(opts);
   }
   if (typeof getToken?.value === 'function') {
-    return getToken.value();
+    return getToken.value(opts);
   }
   const clerk = clerkInstance?.value ?? clerkInstance;
   if (clerk?.session?.getToken) {
-    return clerk.session.getToken();
+    return clerk.session.getToken(opts);
   }
   return null;
 }
