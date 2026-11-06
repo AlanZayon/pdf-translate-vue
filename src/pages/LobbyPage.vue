@@ -273,11 +273,16 @@ async function load() {
     me.value = await fetchMe();
     await refresh();
     connectWs();
-  } catch {
-    error.value =
-      isDevAuth && devSeat.value === 'player-2'
-        ? 'GameSession not found for Guest seat. Switch to Host seat, or join with the invite code.'
-        : 'GameSession not found or you are not a member.';
+  } catch (e) {
+    const apiMsg = e?.response?.data?.message || e?.response?.data?.error;
+    if (isDevAuth && devSeat.value === 'player-2') {
+      error.value =
+        'GameSession not found for Guest seat. Switch to Host seat, or join with the invite code.';
+    } else if (e?.response?.status === 401) {
+      error.value = 'Authentication expired. Sign in again, then reopen the lobby.';
+    } else {
+      error.value = apiMsg || 'GameSession not found or you are not a member.';
+    }
   } finally {
     loading.value = false;
   }
@@ -402,10 +407,15 @@ function diceSummary(dice) {
   return parts.join(' · ');
 }
 
-function playGmAudio(audioPayload) {
+let lastPlayedAudioKey = '';
+
+function playGmAudio(audioPayload, { force = false } = {}) {
   if (!audioPayload?.data_base64) return;
+  const key = audioPayload.data_base64.slice(0, 80);
+  if (!force && key && key === lastPlayedAudioKey) return;
   try {
     lastGmAudio.value = audioPayload;
+    lastPlayedAudioKey = key;
     if (currentAudio) {
       currentAudio.pause();
       currentAudio = null;
@@ -413,20 +423,25 @@ function playGmAudio(audioPayload) {
     const mime = audioPayload.content_type || 'audio/mpeg';
     const src = `data:${mime};base64,${audioPayload.data_base64}`;
     currentAudio = new Audio(src);
-    currentAudio.play().catch(() => {});
+    currentAudio.play().catch((err) => {
+      actionError.value =
+        err?.name === 'NotAllowedError'
+          ? 'Browser blocked autoplay — click “Narrar em voz alta”.'
+          : actionError.value;
+    });
   } catch {
-    /* ignore decode/play failures — text narration remains */
+    /* ignore decode failures — text narration remains */
   }
 }
 
 function replayNarration() {
-  if (lastGmAudio.value?.data_base64) playGmAudio(lastGmAudio.value);
+  if (lastGmAudio.value?.data_base64) playGmAudio(lastGmAudio.value, { force: true });
 }
 
-/** Prefer live gm_audio; only play HTTP audio when the socket is down. */
+/** Play HTTP audio even when WS is up — Funnel/WS often drops large gm_audio payloads. */
 function playResponseAudioIfNeeded(audio) {
   if (!audio?.data_base64) return;
-  if (wsConnected.value) return;
+  lastGmAudio.value = audio;
   playGmAudio(audio);
 }
 
